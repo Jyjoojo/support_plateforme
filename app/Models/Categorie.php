@@ -13,4 +13,15 @@ class Categorie extends Model
     //
     use HasFactory, HasUuids;
 
+    // ─── Relations ───────────────────────────────────────────────
+
+    public function tickets()
+    {
+        return $this->hasMany(Ticket::class);
+    }
+
+    public function articlesBase()
+    {
+        return $this->hasMany(ArticleBase::class);
+    }
 }

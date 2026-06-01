@@ -15,4 +15,28 @@ class Client extends Model
             'est_client_officiel' => 'boolean',
         ];
     }
+
+    // ─── Relations ───────────────────────────────────────────────
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    public function tickets()
+    {
+        return $this->hasMany(Ticket::class);
+    }
+
+    public function statistiques()
+    {
+        return $this->hasMany(Statistique::class, 'filtre_client_id');
+    }
+
+    // ─── Helpers ─────────────────────────────────────────────────
+
+    public function getNomCompletAttribute(): string
+    {
+        return $this->user->prenom . ' ' . $this->user->nom;
+    }
 }

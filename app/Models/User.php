@@ -14,13 +14,14 @@ use Laravel\Fortify\PasskeyAuthenticatable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Laravel\Sanctum\HasApiTokens;
 
 #[Fillable(['nom', 'prenom', 'email', 'password', 'role', 'telephone', 'actif'])]
 #[Hidden(['password', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token'])]
 class User extends Authenticatable implements PasskeyUser
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, Notifiable, PasskeyAuthenticatable, TwoFactorAuthenticatable, HasUuids;
+    use HasApiTokens, HasFactory, Notifiable, PasskeyAuthenticatable, TwoFactorAuthenticatable, HasUuids;
 
     /**
      * Get the attributes that should be cast.
@@ -45,5 +46,43 @@ class User extends Authenticatable implements PasskeyUser
     public function client(): HasOne
     {
         return $this->hasOne(Client::class);
+    }
+
+    public function commentaires()
+    {
+        return $this->hasMany(Commentaire::class, 'auteur_id');
+    }
+
+    public function notifications()
+    {
+        return $this->hasMany(Notification::class);
+    }
+
+    public function statistiques()
+    {
+        return $this->hasMany(Statistique::class, 'genere_par_id');
+    }
+
+    // Tickets créés par cet utilisateur (relation polymorphe)
+    public function ticketsCrees()
+    {
+        return $this->morphMany(Ticket::class, 'createur');
+    }
+
+    // ─── Helpers de rôle ─────────────────────────────────────────
+
+    public function isAdmin(): bool
+    {
+        return $this->role === 'administrateur';
+    }
+
+    public function isTechnicien(): bool
+    {
+        return $this->role === 'technicien';
+    }
+
+    public function isClient(): bool
+    {
+        return $this->role === 'client';
     }
 }
