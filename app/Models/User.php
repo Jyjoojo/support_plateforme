@@ -13,6 +13,7 @@ use Laravel\Fortify\Contracts\PasskeyUser;
 use Laravel\Fortify\PasskeyAuthenticatable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 #[Fillable(['nom', 'prenom', 'email', 'password', 'role', 'telephone', 'actif'])]
 #[Hidden(['password', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token'])]
@@ -34,5 +35,15 @@ class User extends Authenticatable implements PasskeyUser
             'two_factor_confirmed_at' => 'datetime',
             'actif' => 'boolean'
         ];
+    }
+
+    public function technicien(): HasOne
+    {
+        return $this->hasOne(Technicien::class);
+    }
+
+    public function client(): HasOne
+    {
+        return $this->hasOne(Client::class);
     }
 }
