@@ -3,9 +3,12 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\Scope;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 #[Fillable([
     'technicien_id',
@@ -31,24 +34,24 @@ class ArticleBase extends Model
 
     // ─── Relations ───────────────────────────────────────────────
 
-    public function technicien()
+    public function technicien(): BelongsTo
     {
         return $this->belongsTo(Technicien::class);
     }
 
-    public function categorie()
+    public function categorie(): BelongsTo
     {
         return $this->belongsTo(Categorie::class);
     }
 
     // ─── Scopes ──────────────────────────────────────────────────
-
-    public function scopePublies($query)
+    #[Scope]
+    protected function publies(Builder $query): void
     {
-        return $query->where('publie', true);
+        $query->where('publie', true);
     }
 
-    public function scopeRecherche($query, string $terme)
+    public function scopeRecherche(Builder $query, string $terme)
     {
         return $query->whereFullText(['titre', 'contenu', 'mots_cles'], $terme);
     }
