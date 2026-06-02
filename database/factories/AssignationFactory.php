@@ -3,6 +3,9 @@
 namespace Database\Factories;
 
 use App\Models\Assignation;
+use App\Models\Technicien;
+use App\Models\Ticket;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -10,15 +13,17 @@ use Illuminate\Database\Eloquent\Factories\Factory;
  */
 class AssignationFactory extends Factory
 {
-    /**
-     * Define the model's default state.
-     *
-     * @return array<string, mixed>
-     */
+    protected $model = Assignation::class;
+
     public function definition(): array
     {
         return [
-            //
+            'ticket_id' => Ticket::factory(),
+            'technicien_id' => Technicien::factory(),
+            'assigne_par_id' => User::factory()->administrateur(),
+            'methode' => fake()->randomElement(Assignation::METHODES),
+            'motif' => fake()->sentence(),
+            'date_assignation' => fake()->dateTimeBetween('-15 days', 'now'),
         ];
     }
 }

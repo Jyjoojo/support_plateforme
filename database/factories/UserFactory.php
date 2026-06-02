@@ -18,6 +18,13 @@ class UserFactory extends Factory
     protected static ?string $password;
 
     /**
+     * The name of the factory's corresponding model.
+     *
+     * @var string
+     */
+    protected $model = User::class;
+
+    /**
      * Define the model's default state.
      *
      * @return array<string, mixed>
@@ -25,36 +32,45 @@ class UserFactory extends Factory
     public function definition(): array
     {
         return [
-            'name' => fake()->name(),
+            'nom' => fake()->lastName(),
+            'prenom' => fake()->firstName(),
             'email' => fake()->unique()->safeEmail(),
             'email_verified_at' => now(),
             'password' => static::$password ??= Hash::make('password'),
             'remember_token' => Str::random(10),
-            'two_factor_secret' => null,
-            'two_factor_recovery_codes' => null,
-            'two_factor_confirmed_at' => null,
+            'role' => fake()->randomElement(['administrateur', 'technicien', 'client']),
+            'telephone' => fake()->optional()->phoneNumber(),
+            'actif' => fake()->boolean(90),
         ];
     }
 
     /**
-     * Indicate that the model's email address should be unverified.
+     * Indicate the user is an administrateur.
      */
-    public function unverified(): static
+    public function administrateur(): static
     {
         return $this->state(fn (array $attributes) => [
-            'email_verified_at' => null,
+            'role' => 'administrateur',
         ]);
     }
 
     /**
-     * Indicate that the model has two-factor authentication configured.
+     * Indicate the user is a technicien.
      */
-    public function withTwoFactor(): static
+    public function technicien(): static
     {
         return $this->state(fn (array $attributes) => [
-            'two_factor_secret' => encrypt('secret'),
-            'two_factor_recovery_codes' => encrypt(json_encode(['recovery-code-1'])),
-            'two_factor_confirmed_at' => now(),
+            'role' => 'technicien',
+        ]);
+    }
+
+    /**
+     * Indicate the user is a client.
+     */
+    public function client(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'role' => 'client',
         ]);
     }
 }

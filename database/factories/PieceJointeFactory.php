@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use App\Models\PieceJointe;
+use App\Models\Ticket;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -10,15 +11,19 @@ use Illuminate\Database\Eloquent\Factories\Factory;
  */
 class PieceJointeFactory extends Factory
 {
-    /**
-     * Define the model's default state.
-     *
-     * @return array<string, mixed>
-     */
+    protected $model = PieceJointe::class;
+
     public function definition(): array
     {
+        $filename = fake()->word() . '.' . fake()->fileExtension();
+
         return [
-            //
+            'ticket_id' => Ticket::factory(),
+            'nom_fichier' => $filename,
+            'chemin_fichier' => '/storage/attachments/' . $filename,
+            'type_mime' => fake()->mimeType(),
+            'taille' => fake()->numberBetween(1024, 3_000_000),
+            'date_upload' => fake()->dateTimeBetween('-30 days', 'now'),
         ];
     }
 }

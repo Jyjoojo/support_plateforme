@@ -5,13 +5,14 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 
-#[Fillable(['titre', 'description', 'statut', 'priorité','source_creation', 'categorie_id', 'createur_id', 'client_concerne_id'])]
+#[Fillable(['titre', 'description', 'statut', 'priorite', 'source_creation', 'categorie_id', 'createur_id', 'createur_type', 'client_id', 'date_resolution'])]
 class Ticket extends Model
 {
-    use HasUuids;
+    use HasFactory, HasUuids;
 
     protected function casts(): array
     {

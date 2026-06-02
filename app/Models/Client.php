@@ -3,12 +3,15 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 #[Fillable(['user_id', 'entreprise', 'secteur', 'est_client_officiel',])]
 class Client extends Model
 {
     //
+    use HasFactory, HasUuids;
     protected function casts() : array
     {
         return [
