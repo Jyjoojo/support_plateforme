@@ -33,7 +33,7 @@ class UserController extends Controller
             'nom'         => 'required|string|max:100',
             'prenom'      => 'required|string|max:100',
             'email'       => 'required|email|unique:users',
-            'mot_de_passe'=> 'required|string|min:8',
+            'password'=> 'required|string|min:8',
             'role'        => 'required|in:administrateur,technicien,client',
             'telephone'   => 'nullable|string|max:20',
             // Champs spécifiques rôle
@@ -48,7 +48,7 @@ class UserController extends Controller
             'nom'          => $data['nom'],
             'prenom'       => $data['prenom'],
             'email'        => $data['email'],
-            'mot_de_passe' => Hash::make($data['mot_de_passe']),
+            'password' => Hash::make($data['password']),
             'role'         => $data['role'],
             'telephone'    => $data['telephone'] ?? null,
         ]);

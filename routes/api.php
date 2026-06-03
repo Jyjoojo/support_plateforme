@@ -2,6 +2,24 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\AuthController;
+
+/*
+|--------------------------------------------------------------------------
+| API Routes — FIRST INFO Ticketing
+|--------------------------------------------------------------------------
+| Préfixe /api appliqué automatiquement par bootstrap/app.php
+| Toutes les routes sont stateless (Sanctum token auth)
+*/
+
+// ═══════════════════════════════════════════════════════════
+// ROUTES PUBLIQUES — sans authentification
+// ═══════════════════════════════════════════════════════════
+Route::prefix('auth')->group(function () {
+    Route::post('login',          [AuthController::class, 'login']);
+    Route::post('forgot-password',[AuthController::class, 'forgotPassword']);
+    Route::post('reset-password', [AuthController::class, 'resetPassword']);
+});
 
 Route::get('/user', function (Request $request) {
     return $request->user();
