@@ -45,8 +45,7 @@ class ArticleBase extends Model
     }
 
     // ─── Scopes ──────────────────────────────────────────────────
-    #[Scope]
-    protected function publies(Builder $query): void
+    public function scopePublies(Builder $query)
     {
         $query->where('publie', true);
     }

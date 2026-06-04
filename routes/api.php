@@ -3,6 +3,7 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\ArticleBaseController;
 
 /*
 |--------------------------------------------------------------------------
@@ -20,6 +21,10 @@ Route::prefix('auth')->group(function () {
     Route::post('forgot-password',[AuthController::class, 'forgotPassword']);
     Route::post('reset-password', [AuthController::class, 'resetPassword']);
 });
+
+// Base de connaissances : articles publiés accessibles sans compte
+Route::get('articles',      [ArticleBaseController::class, 'index']);
+Route::get('articles/{id}', [ArticleBaseController::class, 'show']);
 
 Route::get('/user', function (Request $request) {
     return $request->user();
