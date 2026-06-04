@@ -4,6 +4,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ArticleBaseController;
+use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\TicketController;
 
 /*
 |--------------------------------------------------------------------------
@@ -25,6 +27,29 @@ Route::prefix('auth')->group(function () {
 // Base de connaissances : articles publiés accessibles sans compte
 Route::get('articles',      [ArticleBaseController::class, 'index']);
 Route::get('articles/{id}', [ArticleBaseController::class, 'show']);
+
+// ═══════════════════════════════════════════════════════════
+// ROUTES PROTÉGÉES — auth:sanctum requis
+// ═══════════════════════════════════════════════════════════
+Route::middleware('auth:sanctum')->group(function () {
+
+    // ── Auth ────────────────────────────────────────────────
+    Route::post('auth/logout',  [AuthController::class, 'logout']);
+    Route::get('auth/me',       [AuthController::class, 'me']);
+    Route::patch('auth/profil', [AuthController::class, 'updateProfil']);
+
+    // ── Notifications (propres à l'utilisateur connecté) ────
+    Route::prefix('notifications')->group(function () {
+        Route::get('/',                           [NotificationController::class, 'index']);
+        Route::patch('{id}/lire',                 [NotificationController::class, 'marquerLue']);
+        Route::post('tout-lire',                  [NotificationController::class, 'toutMarquerLu']);
+        Route::delete('{id}',                     [NotificationController::class, 'destroy']);
+    });
+
+    // ── Tickets ─────────────────────────────────────────────
+    // Les policies contrôlent qui voit / modifie quoi
+    Route::apiResource('tickets', TicketController::class);
+});
 
 Route::get('/user', function (Request $request) {
     return $request->user();
