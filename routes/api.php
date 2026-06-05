@@ -9,6 +9,7 @@ use App\Http\Controllers\TicketController;
 use App\Http\Controllers\CommentaireController;
 use App\Http\Controllers\PieceJointeController;
 use App\Http\Controllers\AssignationController;
+use App\Http\Controllers\CategorieController;
 
 /*
 |--------------------------------------------------------------------------
@@ -62,6 +63,23 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('assignation',           [AssignationController::class, 'assigner']);
         Route::post('fermer',                [TicketController::class, 'fermer']);
         Route::post('reouvrir',              [TicketController::class, 'reOuvrir']);
+    });
+
+    // ── Catégories ─────────────────────────────────────────
+    Route::apiResource('categories', CategorieController::class);
+
+    // ═══════════════════════════════════════════════════════
+    // ROUTES TECHNICIEN — rôles : technicien + administrateur
+    // ═══════════════════════════════════════════════════════
+    Route::middleware('role:technicien,administrateur')->group(function () {
+        // Auto-assignation d'un ticket par le technicien lui-même
+        Route::post('tickets/{ticket}/auto-assigner', [AssignationController::class, 'autoAssigner']);
+
+        // Gestion base de connaissances
+        Route::apiResource('articles', ArticleBaseController::class)
+             ->except(['index', 'show']); // index/show déjà définis en public
+        Route::post('articles/{article}/publier',  [ArticleBaseController::class, 'publier']);
+        Route::post('articles/{article}/archiver', [ArticleBaseController::class, 'archiver']);
     });
 });
 
