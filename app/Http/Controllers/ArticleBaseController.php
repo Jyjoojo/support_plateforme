@@ -5,10 +5,29 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\ArticleBase;
 use Illuminate\Http\JsonResponse;
+use OpenApi\Annotations as OA;
 
+/**
+ * @OA\Tag(
+ *     name="Articles",
+ *     description="Gestion de la base de connaissances (articles)"
+ * )
+ */
 class ArticleBaseController extends Controller
 {
-    /** GET /api/articles (public) */
+    /**
+     * @OA\Get(
+     *     path="/api/articles",
+     *     summary="Lister les articles publiés (public)",
+     *     tags={"Articles"},
+     *     @OA\Parameter(name="search", in="query", description="Rechercher par titre ou contenu", required=false, @OA\Schema(type="string")),
+     *     @OA\Parameter(name="categorie_id", in="query", description="Filtrer par catégorie", required=false, @OA\Schema(type="string", format="uuid")),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Liste paginée des articles"
+     *     )
+     * )
+     */
     public function index(Request $request): JsonResponse
     {
         $articles = ArticleBase::publies()
@@ -21,7 +40,16 @@ class ArticleBaseController extends Controller
         return response()->json($articles);
     }
 
-    /** GET /api/articles/{article} (public) */
+    /**
+     * @OA\Get(
+     *     path="/api/articles/{article}",
+     *     summary="Afficher un article spécifique (public)",
+     *     tags={"Articles"},
+     *     @OA\Parameter(name="article", in="path", description="ID de l'article", required=true, @OA\Schema(type="string", format="uuid")),
+     *     @OA\Response(response=200, description="Détails de l'article"),
+     *     @OA\Response(response=404, description="Article non disponible")
+     * )
+     */
     public function show(ArticleBase $article): JsonResponse
     {
         if (!$article->publie) {
@@ -33,7 +61,26 @@ class ArticleBaseController extends Controller
         return response()->json($article->load(['technicien.user', 'categorie']));
     }
 
-    /** POST /api/articles */
+    /**
+     * @OA\Post(
+     *     path="/api/articles",
+     *     summary="Créer un nouvel article",
+     *     tags={"Articles"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"titre","contenu"},
+     *             @OA\Property(property="titre", type="string", maxLength=255, example="Titre de l'article"),
+     *             @OA\Property(property="contenu", type="string", example="Contenu détaillé..."),
+     *             @OA\Property(property="mots_cles", type="string", nullable=true, example="support, aide"),
+     *             @OA\Property(property="categorie_id", type="string", format="uuid", nullable=true)
+     *         )
+     *     ),
+     *     @OA\Response(response=201, description="Article créé avec succès"),
+     *     @OA\Response(response=422, description="Erreur de validation des données")
+     * )
+     */
     public function store(Request $request): JsonResponse
     {
         $data = $request->validate([
@@ -52,7 +99,27 @@ class ArticleBaseController extends Controller
         return response()->json($article, 201);
     }
 
-    /** PUT /api/articles/{article} */
+    /**
+     * @OA\Put(
+     *     path="/api/articles/{article}",
+     *     summary="Mettre à jour un article",
+     *     tags={"Articles"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(name="article", in="path", description="ID de l'article", required=true, @OA\Schema(type="string", format="uuid")),
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             @OA\Property(property="titre", type="string", maxLength=255),
+     *             @OA\Property(property="contenu", type="string"),
+     *             @OA\Property(property="mots_cles", type="string", nullable=true),
+     *             @OA\Property(property="categorie_id", type="string", format="uuid", nullable=true)
+     *         )
+     *     ),
+     *     @OA\Response(response=200, description="Article mis à jour avec succès"),
+     *     @OA\Response(response=422, description="Erreur de validation des données"),
+     *     @OA\Response(response=404, description="Article non trouvé")
+     * )
+     */
     public function update(Request $request, ArticleBase $article): JsonResponse
     {
         $article->update($request->validate([
@@ -65,21 +132,49 @@ class ArticleBaseController extends Controller
         return response()->json($article);
     }
 
-    /** DELETE /api/articles/{article} */
+    /**
+     * @OA\Delete(
+     *     path="/api/articles/{article}",
+     *     summary="Supprimer (archiver) un article",
+     *     tags={"Articles"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(name="article", in="path", description="ID de l'article", required=true, @OA\Schema(type="string", format="uuid")),
+     *     @OA\Response(response=200, description="Article archivé"),
+     *     @OA\Response(response=404, description="Article non trouvé")
+     * )
+     */
     public function destroy(ArticleBase $article): JsonResponse
     {
         $article->archiver();
         return response()->json(['message' => 'Article archivé.']);
     }
 
-    /** POST /api/articles/{article}/publier */
+    /**
+     * @OA\Post(
+     *     path="/api/articles/{article}/publier",
+     *     summary="Publier un article",
+     *     tags={"Articles"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(name="article", in="path", description="ID de l'article", required=true, @OA\Schema(type="string", format="uuid")),
+     *     @OA\Response(response=200, description="Article publié")
+     * )
+     */
     public function publier(ArticleBase $article): JsonResponse
     {
         $article->publier();
         return response()->json(['message' => 'Article publié.']);
     }
 
-    /** POST /api/articles/{article}/archiver */
+    /**
+     * @OA\Post(
+     *     path="/api/articles/{article}/archiver",
+     *     summary="Archiver un article manuellement",
+     *     tags={"Articles"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(name="article", in="path", description="ID de l'article", required=true, @OA\Schema(type="string", format="uuid")),
+     *     @OA\Response(response=200, description="Article archivé")
+     * )
+     */
     public function archiver(ArticleBase $article): JsonResponse
     {
         $article->archiver();

@@ -38,6 +38,14 @@ class TicketController extends Controller
         // Admin → tous les tickets
 
         // Filtres query string
+        if ($request->filled('assignes')) {
+            $query->whereHas('assignationActive');
+        }
+        if ($request->filled('technicien_id')) {
+            $query->whereHas('assignationActive', fn($q) =>
+                $q->where('technicien_id', $request->technicien_id)
+            );
+        }
         if ($request->filled('statut')) {
             $query->where('statut', $request->statut);
         }

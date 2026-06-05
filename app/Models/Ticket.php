@@ -52,7 +52,16 @@ class Ticket extends Model
     // Dernière assignation active
     public function assignationActive()
     {
-        return $this->hasOne(Assignation::class)->latestOfMany('date_assignation');
+        $relatedTable = (new Assignation())->getTable();
+
+        return $this->hasOne(Assignation::class)
+            ->whereRaw("{$relatedTable}.id = (
+                select id
+                from {$relatedTable} as latest_assignation
+                where latest_assignation.ticket_id = {$relatedTable}.ticket_id
+                order by latest_assignation.date_assignation desc, latest_assignation.created_at desc
+                limit 1
+            )");
     }
 
     // Technicien actuellement assigné

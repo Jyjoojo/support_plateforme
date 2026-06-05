@@ -21,6 +21,17 @@ use App\Http\Controllers\UserController;
 | Toutes les routes sont stateless (Sanctum token auth)
 */
 
+// Swagger documentation endpoint
+Route::get('/docs', function () {
+    $docsPath = storage_path('api-docs/api-docs.json');
+    if (!file_exists($docsPath)) {
+        return response()->json(['error' => 'Documentation not found'], 404);
+    }
+    return response()->file($docsPath, [
+        'Content-Type' => 'application/json',
+    ]);
+});
+
 // ═══════════════════════════════════════════════════════════
 // ROUTES PUBLIQUES — sans authentification
 // ═══════════════════════════════════════════════════════════
@@ -68,7 +79,8 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     // ── Catégories ─────────────────────────────────────────
-    Route::apiResource('categories', CategorieController::class);
+    Route::apiResource('categories', CategorieController::class)
+         ->parameters(['categories' => 'categorie']);
 
     // ═══════════════════════════════════════════════════════
     // ROUTES TECHNICIEN — rôles : technicien + administrateur

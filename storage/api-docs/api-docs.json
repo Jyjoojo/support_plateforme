@@ -1,0 +1,599 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Support Plateforme API",
+    "version": "1.0.0",
+    "description": "API de gestion des tickets de support avec authentification Sanctum"
+  },
+  "servers": [
+    {
+      "url": "/api",
+      "description": "Serveur local"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Token Bearer à utiliser dans l'en-tête Authorization"
+      }
+    },
+    "schemas": {
+      "User": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "name": { "type": "string" },
+          "email": { "type": "string", "format": "email" },
+          "role": { "type": "string", "enum": ["user", "technicien", "administrateur"] },
+          "actif": { "type": "boolean" }
+        }
+      },
+      "Ticket": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "titre": { "type": "string" },
+          "description": { "type": "string" },
+          "statut": { "type": "string", "enum": ["ouvert", "en_cours", "fermé"] },
+          "categorie_id": { "type": "integer" },
+          "user_id": { "type": "integer" },
+          "created_at": { "type": "string", "format": "date-time" }
+        }
+      },
+      "Notification": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "message": { "type": "string" },
+          "lue": { "type": "boolean" },
+          "created_at": { "type": "string", "format": "date-time" }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/auth/login": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Connexion",
+        "description": "Se connecter et recevoir un token Bearer.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": { "type": "string", "format": "email" },
+                  "password": { "type": "string" }
+                },
+                "required": ["email", "password"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Token JWT retourné",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "token": { "type": "string" },
+                    "token_type": { "type": "string" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "Identifiants invalides" }
+        }
+      }
+    },
+    "/auth/forgot-password": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Mot de passe oublié",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": { "email": { "type": "string", "format": "email" } },
+                "required": ["email"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Email de réinitialisation envoyé" }
+        }
+      }
+    },
+    "/auth/reset-password": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Réinitialiser le mot de passe",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": { "type": "string", "format": "email" },
+                  "token": { "type": "string" },
+                  "password": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Mot de passe réinitialisé" }
+        }
+      }
+    },
+    "/auth/logout": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Déconnexion",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": { "description": "Déconnexion réussie" },
+          "401": { "description": "Non authentifié" }
+        }
+      }
+    },
+    "/auth/me": {
+      "get": {
+        "tags": ["Auth"],
+        "summary": "Profil connecté",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Utilisateur connecté",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/User" }
+              }
+            }
+          },
+          "401": { "description": "Non authentifié" }
+        }
+      }
+    },
+    "/auth/profil": {
+      "patch": {
+        "tags": ["Auth"],
+        "summary": "Mettre à jour le profil",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": { "type": "string" },
+                  "email": { "type": "string", "format": "email" },
+                  "current_password": { "type": "string" },
+                  "password": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Profil mis à jour" }
+        }
+      }
+    },
+    "/articles": {
+      "get": {
+        "tags": ["Articles"],
+        "summary": "Liste des articles publics",
+        "description": "Récupère les articles publiés (sans authentification)",
+        "responses": {
+          "200": {
+            "description": "Liste d'articles",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "type": "object" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/articles/{id}": {
+      "get": {
+        "tags": ["Articles"],
+        "summary": "Article détaillé",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer" }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Détails de l'article" },
+          "404": { "description": "Article non trouvé" }
+        }
+      }
+    },
+    "/notifications": {
+      "get": {
+        "tags": ["Notifications"],
+        "summary": "Lister les notifications",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Liste des notifications",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/Notification" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/notifications/{id}/lire": {
+      "patch": {
+        "tags": ["Notifications"],
+        "summary": "Marquer une notification comme lue",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": { "description": "Notification marquée comme lue" }
+        }
+      }
+    },
+    "/notifications/tout-lire": {
+      "post": {
+        "tags": ["Notifications"],
+        "summary": "Marquer toutes les notifications comme lues",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": { "description": "Toutes les notifications marquées" }
+        }
+      }
+    },
+    "/notifications/{id}": {
+      "delete": {
+        "tags": ["Notifications"],
+        "summary": "Supprimer une notification",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "204": { "description": "Notification supprimée" }
+        }
+      }
+    },
+    "/tickets": {
+      "get": {
+        "tags": ["Tickets"],
+        "summary": "Lister les tickets",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "page", "in": "query", "schema": { "type": "integer" } },
+          { "name": "per_page", "in": "query", "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Liste des tickets",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/Ticket" }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Tickets"],
+        "summary": "Créer un ticket",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "titre": { "type": "string" },
+                  "description": { "type": "string" },
+                  "categorie_id": { "type": "integer" }
+                },
+                "required": ["titre", "description", "categorie_id"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Ticket créé" }
+        }
+      }
+    },
+    "/tickets/{ticket}": {
+      "get": {
+        "tags": ["Tickets"],
+        "summary": "Afficher un ticket",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "ticket", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": { "description": "Détails du ticket" },
+          "404": { "description": "Ticket non trouvé" }
+        }
+      },
+      "put": {
+        "tags": ["Tickets"],
+        "summary": "Mettre à jour un ticket",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "ticket", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "titre": { "type": "string" },
+                  "description": { "type": "string" },
+                  "statut": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Ticket mis à jour" }
+        }
+      },
+      "delete": {
+        "tags": ["Tickets"],
+        "summary": "Supprimer un ticket",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "ticket", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "204": { "description": "Ticket supprimé" }
+        }
+      }
+    },
+    "/tickets/{ticket}/commentaires": {
+      "get": {
+        "tags": ["Commentaires"],
+        "summary": "Lister les commentaires d'un ticket",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "ticket", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": { "description": "Liste des commentaires" }
+        }
+      },
+      "post": {
+        "tags": ["Commentaires"],
+        "summary": "Ajouter un commentaire",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "ticket", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": { "contenu": { "type": "string" } },
+                "required": ["contenu"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Commentaire ajouté" }
+        }
+      }
+    },
+    "/tickets/{ticket}/pieces-jointes": {
+      "get": {
+        "tags": ["Pièces Jointes"],
+        "summary": "Lister les pièces jointes",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "ticket", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": { "description": "Liste des pièces jointes" }
+        }
+      },
+      "post": {
+        "tags": ["Pièces Jointes"],
+        "summary": "Ajouter une pièce jointe",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "ticket", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": { "fichier": { "type": "string", "format": "binary" } }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Pièce jointe ajoutée" }
+        }
+      }
+    },
+    "/tickets/{ticket}/assignation": {
+      "post": {
+        "tags": ["Assignation"],
+        "summary": "Assigner un ticket",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "ticket", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": { "technicien_id": { "type": "integer" } },
+                "required": ["technicien_id"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Ticket assigné" }
+        }
+      }
+    },
+    "/tickets/{ticket}/fermer": {
+      "post": {
+        "tags": ["Tickets"],
+        "summary": "Fermer un ticket",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "ticket", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": { "description": "Ticket fermé" }
+        }
+      }
+    },
+    "/tickets/{ticket}/reouvrir": {
+      "post": {
+        "tags": ["Tickets"],
+        "summary": "Réouvrir un ticket",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "ticket", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": { "description": "Ticket réouvert" }
+        }
+      }
+    },
+    "/categories": {
+      "get": {
+        "tags": ["Catégories"],
+        "summary": "Lister les catégories",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": { "description": "Liste des catégories" }
+        }
+      },
+      "post": {
+        "tags": ["Catégories"],
+        "summary": "Créer une catégorie",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": { "nom": { "type": "string" } },
+                "required": ["nom"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Catégorie créée" }
+        }
+      }
+    },
+    "/users": {
+      "get": {
+        "tags": ["Utilisateurs"],
+        "summary": "Lister les utilisateurs",
+        "security": [{ "bearerAuth": [] }],
+        "description": "Administrateur uniquement",
+        "responses": {
+          "200": { "description": "Liste des utilisateurs" }
+        }
+      },
+      "post": {
+        "tags": ["Utilisateurs"],
+        "summary": "Créer un utilisateur",
+        "security": [{ "bearerAuth": [] }],
+        "description": "Administrateur uniquement",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": { "type": "string" },
+                  "email": { "type": "string", "format": "email" },
+                  "password": { "type": "string" },
+                  "role": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Utilisateur créé" }
+        }
+      }
+    },
+    "/statistiques": {
+      "get": {
+        "tags": ["Statistiques"],
+        "summary": "Voir les statistiques",
+        "security": [{ "bearerAuth": [] }],
+        "description": "Administrateur uniquement",
+        "responses": {
+          "200": { "description": "Statistiques" }
+        }
+      },
+      "post": {
+        "tags": ["Statistiques"],
+        "summary": "Générer les statistiques",
+        "security": [{ "bearerAuth": [] }],
+        "description": "Administrateur uniquement",
+        "responses": {
+          "200": { "description": "Statistiques générées" }
+        }
+      }
+    }
+  }
+}

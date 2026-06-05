@@ -10,13 +10,34 @@ use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
+use OpenApi\Annotations as OA;
 
 class AuthController extends Controller
 {
-    //
     /**
-     * POST /api/auth/login
-     * Retourne un token Sanctum
+     * @OA\Post(
+     *     path="/auth/login",
+     *     tags={"Auth"},
+     *     summary="Connexion utilisateur",
+     *     description="Authentifie l'utilisateur et retourne un token Bearer Sanctum",
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"email", "password"},
+     *             @OA\Property(property="email", type="string", format="email", example="user@example.com"),
+     *             @OA\Property(property="password", type="string", format="password", example="password123")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Authentification réussie",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="token", type="string", example="1|abc...xyz"),
+     *             @OA\Property(property="user", type="object")
+     *         )
+     *     ),
+     *     @OA\Response(response=401, description="Identifiants invalides")
+     * )
      */
     public function login(LoginRequest $request): JsonResponse
     {
@@ -42,7 +63,14 @@ class AuthController extends Controller
     }
 
     /**
-     * POST /api/auth/logout
+     * @OA\Post(
+     *     path="/auth/logout",
+     *     tags={"Auth"},
+     *     summary="Déconnexion",
+     *     security={{"bearerAuth": {}}},
+     *     @OA\Response(response=200, description="Déconnexion réussie"),
+     *     @OA\Response(response=401, description="Non authentifié")
+     * )
      */
     public function logout(Request $request): JsonResponse
     {
@@ -52,7 +80,18 @@ class AuthController extends Controller
     }
 
     /**
-     * GET /api/auth/me
+     * @OA\Get(
+     *     path="/auth/me",
+     *     tags={"Auth"},
+     *     summary="Récupérer le profil connecté",
+     *     security={{"bearerAuth": {}}},
+     *     @OA\Response(
+     *         response=200,
+     *         description="Informations de l'utilisateur connecté",
+     *         @OA\JsonContent(type="object")
+     *     ),
+     *     @OA\Response(response=401, description="Non authentifié")
+     * )
      */
     public function me(Request $request): JsonResponse
     {
@@ -62,7 +101,24 @@ class AuthController extends Controller
     }
 
     /**
-     * PATCH /api/auth/profil
+     * @OA\Patch(
+     *     path="/auth/profil",
+     *     tags={"Auth"},
+     *     summary="Mettre à jour le profil",
+     *     security={{"bearerAuth": {}}},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             @OA\Property(property="name", type="string", example="Jean Dupont"),
+     *             @OA\Property(property="email", type="string", format="email", example="jean@example.com"),
+     *             @OA\Property(property="current_password", type="string", format="password"),
+     *             @OA\Property(property="password", type="string", format="password")
+     *         )
+     *     ),
+     *     @OA\Response(response=200, description="Profil mis à jour"),
+     *     @OA\Response(response=401, description="Non authentifié"),
+     *     @OA\Response(response=422, description="Validation échouée")
+     * )
      */
     public function updateProfil(UpdateProfilRequest $request): JsonResponse
     {
@@ -82,7 +138,19 @@ class AuthController extends Controller
     }
 
     /**
-     * POST /api/auth/forgot-password
+     * @OA\Post(
+     *     path="/auth/forgot-password",
+     *     tags={"Auth"},
+     *     summary="Demander un lien de réinitialisation",
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"email"},
+     *             @OA\Property(property="email", type="string", format="email", example="user@example.com")
+     *         )
+     *     ),
+     *     @OA\Response(response=200, description="Email de réinitialisation envoyé")
+     * )
      */
     public function forgotPassword(Request $request): JsonResponse
     {
@@ -97,7 +165,22 @@ class AuthController extends Controller
     }
 
     /**
-     * POST /api/auth/reset-password
+     * @OA\Post(
+     *     path="/auth/reset-password",
+     *     tags={"Auth"},
+     *     summary="Réinitialiser le mot de passe",
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"email", "token", "password"},
+     *             @OA\Property(property="email", type="string", format="email"),
+     *             @OA\Property(property="token", type="string"),
+     *             @OA\Property(property="password", type="string", format="password")
+     *         )
+     *     ),
+     *     @OA\Response(response=200, description="Mot de passe réinitialisé"),
+     *     @OA\Response(response=422, description="Token invalide ou expiré")
+     * )
      */
     public function resetPassword(Request $request): JsonResponse
     {
