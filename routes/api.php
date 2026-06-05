@@ -6,6 +6,9 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ArticleBaseController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\TicketController;
+use App\Http\Controllers\CommentaireController;
+use App\Http\Controllers\PieceJointeController;
+use App\Http\Controllers\AssignationController;
 
 /*
 |--------------------------------------------------------------------------
@@ -49,6 +52,17 @@ Route::middleware('auth:sanctum')->group(function () {
     // ── Tickets ─────────────────────────────────────────────
     // Les policies contrôlent qui voit / modifie quoi
     Route::apiResource('tickets', TicketController::class);
+
+    // Sous-ressources d'un ticket
+    Route::prefix('tickets/{ticket}')->group(function () {
+        Route::apiResource('commentaires',   CommentaireController::class)->shallow();
+        Route::apiResource('pieces-jointes', PieceJointeController::class)
+             ->only(['index', 'store', 'destroy'])
+             ->shallow();
+        Route::post('assignation',           [AssignationController::class, 'assigner']);
+        Route::post('fermer',                [TicketController::class, 'fermer']);
+        Route::post('reouvrir',              [TicketController::class, 'reOuvrir']);
+    });
 });
 
 Route::get('/user', function (Request $request) {
