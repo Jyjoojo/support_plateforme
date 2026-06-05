@@ -10,6 +10,8 @@ use App\Http\Controllers\CommentaireController;
 use App\Http\Controllers\PieceJointeController;
 use App\Http\Controllers\AssignationController;
 use App\Http\Controllers\CategorieController;
+use App\Http\Controllers\StatistiqueController;
+use App\Http\Controllers\UserController;
 
 /*
 |--------------------------------------------------------------------------
@@ -80,6 +82,26 @@ Route::middleware('auth:sanctum')->group(function () {
              ->except(['index', 'show']); // index/show déjà définis en public
         Route::post('articles/{article}/publier',  [ArticleBaseController::class, 'publier']);
         Route::post('articles/{article}/archiver', [ArticleBaseController::class, 'archiver']);
+    });
+
+    // ═══════════════════════════════════════════════════════
+    // ROUTES ADMINISTRATEUR uniquement
+    // ═══════════════════════════════════════════════════════
+    Route::middleware('role:administrateur')->group(function () {
+        // Gestion des utilisateurs
+        Route::apiResource('users', UserController::class);
+        Route::patch('users/{user}/toggle-actif', [UserController::class, 'toggleActif']);
+
+        // Statistiques
+        Route::get('statistiques',           [StatistiqueController::class, 'index']);
+        Route::post('statistiques/generer',  [StatistiqueController::class, 'generer']);
+        Route::get('statistiques/{id}',      [StatistiqueController::class, 'show']);
+
+        // Assignation manuelle par l'admin
+        Route::post('tickets/{ticket}/assigner-technicien', [AssignationController::class, 'assignerParAdmin']);
+
+        // Historique complet des assignations d'un ticket
+        Route::get('tickets/{ticket}/assignations', [AssignationController::class, 'historique']);
     });
 });
 
