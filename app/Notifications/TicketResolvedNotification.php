@@ -8,20 +8,18 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
-class TicketStatusChangedNotification extends Notification implements ShouldQueue
+class TicketResolvedNotification extends Notification implements ShouldQueue
 {
     use Queueable;
 
     protected $ticket;
-    protected $oldStatus;
 
     /**
      * Create a new notification instance.
      */
-    public function __construct(Ticket $ticket, string $oldStatus)
+    public function __construct(Ticket $ticket)
     {
         $this->ticket = $ticket;
-        $this->oldStatus = $oldStatus;
     }
 
     /**
@@ -42,11 +40,10 @@ class TicketStatusChangedNotification extends Notification implements ShouldQueu
         $url = config('app.url') . '/tickets/' . $this->ticket->id;
 
         return (new MailMessage)
-            ->subject('Statut du ticket #' . $this->ticket->id . ' modifié')
-            ->line("Le statut du ticket \"{$this->ticket->titre}\" a été changé.")
-            ->line("Ancien statut: **{$this->oldStatus}**")
-            ->line("Nouveau statut: **{$this->ticket->statut}**")
-            ->action('Voir le ticket', $url);
+            ->subject('Ticket #' . $this->ticket->id . ' résolu')
+            ->line("Le ticket \"{$this->ticket->titre}\" a été marqué comme résolu.")
+            ->action('Voir le ticket', $url)
+            ->line('Vous pouvez consulter les détails dans l’interface.');
     }
 
     /**
@@ -58,8 +55,8 @@ class TicketStatusChangedNotification extends Notification implements ShouldQueu
     {
         return [
             'ticket_id' => $this->ticket->id,
-            'ancien_statut' => $this->oldStatus,
-            'nouveau_statut' => $this->ticket->statut,
+            'titre' => $this->ticket->titre,
+            'date_resolution' => $this->ticket->date_resolution?->toDateTimeString(),
         ];
     }
 }

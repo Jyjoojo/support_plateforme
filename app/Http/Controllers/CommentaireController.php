@@ -10,6 +10,7 @@ use App\Http\Resources\CommentaireResource;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use App\Notifications\TicketCommentedNotification;
+use App\Notifications\TicketResolvedNotification;
 
 class CommentaireController extends Controller
 {
@@ -48,6 +49,7 @@ class CommentaireController extends Controller
         // Si marqué comme solution → résoudre le ticket
         if ($commentaire->est_solution) {
             $ticket->resoudre();
+            $this->notifierTicketResolu($ticket, $commentaire);
         }
 
         // Notifier les parties prenantes (client + technicien assigné)
@@ -107,6 +109,28 @@ class CommentaireController extends Controller
             $user = User::find($userId);
             if ($user) {
                 $user->notify(new TicketCommentedNotification($ticket, $commentaire));
+            }
+        }
+    }
+
+    private function notifierTicketResolu(Ticket $ticket, Commentaire $commentaire): void
+    {
+        $destinataires = [];
+        $auteurId = $commentaire->auteur_id;
+
+        if ($ticket->client && $ticket->client->user_id !== $auteurId) {
+            $destinataires[] = $ticket->client->user_id;
+        }
+
+        $assignation = $ticket->assignationActive;
+        if ($assignation && $assignation->technicien->user_id !== $auteurId) {
+            $destinataires[] = $assignation->technicien->user_id;
+        }
+
+        foreach ($destinataires as $userId) {
+            $user = User::find($userId);
+            if ($user) {
+                $user->notify(new TicketResolvedNotification($ticket));
             }
         }
     }
