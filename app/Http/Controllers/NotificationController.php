@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
-use App\Models\Notification;
 
 class NotificationController extends Controller
 {
@@ -13,31 +12,29 @@ class NotificationController extends Controller
     {
         $notifications = $request->user()
             ->notifications()
-            ->orderByDesc('date_envoi')
+            ->orderByDesc('created_at')
             ->paginate(30);
 
         return response()->json([
-            'data'       => $notifications,
-            'non_lues'   => $request->user()->notifications()->nonLues()->count(),
+            'data'     => $notifications,
+            'non_lues' => $request->user()->unreadNotifications()->count(),
         ]);
     }
 
     /** PATCH /api/notifications/{id}/lire */
     public function marquerLue(Request $request, string $id): JsonResponse
     {
-        $notification = Notification::where('id', $id)
-            ->where('user_id', $request->user()->id)
-            ->firstOrFail();
+        $notification = $request->user()->notifications()->where('id', $id)->firstOrFail();
 
-        $notification->marquerLue();
+        $notification->markAsRead();
 
-        return response()->json(['message' => 'Notification lue.']);
+        return response()->json(['message' => 'Notification marquée comme lue.']);
     }
 
     /** POST /api/notifications/tout-lire */
     public function toutMarquerLu(Request $request): JsonResponse
     {
-        $request->user()->notifications()->nonLues()->update(['est_lue' => true]);
+        $request->user()->unreadNotifications()->update(['read_at' => now()]);
 
         return response()->json(['message' => 'Toutes les notifications marquées comme lues.']);
     }
@@ -45,10 +42,8 @@ class NotificationController extends Controller
     /** DELETE /api/notifications/{id} */
     public function destroy(Request $request, string $id): JsonResponse
     {
-        Notification::where('id', $id)
-            ->where('user_id', $request->user()->id)
-            ->firstOrFail()
-            ->delete();
+        $notification = $request->user()->notifications()->where('id', $id)->firstOrFail();
+        $notification->delete();
 
         return response()->json(['message' => 'Notification supprimée.']);
     }

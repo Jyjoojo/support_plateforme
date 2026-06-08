@@ -3,12 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Models\Commentaire;
-use App\Models\Notification;
 use App\Models\Ticket;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use App\Http\Resources\CommentaireResource;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use App\Notifications\TicketCommentedNotification;
 
 class CommentaireController extends Controller
 {
@@ -50,7 +51,7 @@ class CommentaireController extends Controller
         }
 
         // Notifier les parties prenantes (client + technicien assigné)
-        $this->notifierNouveauCommentaire($ticket, $request->user()->id);
+        $this->notifierNouveauCommentaire($ticket, $commentaire);
 
         return response()->json([
             'message'      => 'Commentaire ajouté.',
@@ -86,9 +87,10 @@ class CommentaireController extends Controller
         return response()->json(['message' => 'Commentaire supprimé.']);
     }
 
-    private function notifierNouveauCommentaire(Ticket $ticket, string $auteurId): void
+    private function notifierNouveauCommentaire(Ticket $ticket, Commentaire $commentaire): void
     {
         $destinataires = [];
+        $auteurId = $commentaire->auteur_id;
 
         // Notifier le client si le commentaire vient d'un technicien
         if ($ticket->client && $ticket->client->user_id !== $auteurId) {
@@ -102,12 +104,10 @@ class CommentaireController extends Controller
         }
 
         foreach ($destinataires as $userId) {
-            Notification::envoyer(
-                $userId,
-                "Nouveau commentaire sur le ticket : {$ticket->titre}",
-                'nouveau_commentaire',
-                $ticket->id
-            );
+            $user = User::find($userId);
+            if ($user) {
+                $user->notify(new TicketCommentedNotification($ticket, $commentaire));
+            }
         }
     }
 }

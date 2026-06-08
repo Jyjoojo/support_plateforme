@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\Ticket;
-use App\Models\Notification;
+use App\Models\User;
+use App\Notifications\TicketCreatedNotification;
+use App\Notifications\SimpleNotification;
 
 use App\Http\Requests\StoreTicketRequest;
 use App\Http\Requests\UpdateTicketRequest;
@@ -111,13 +113,8 @@ class TicketController extends Controller
 
         // Notification à tous les admins pour un nouveau ticket
         if ($user->isClient()) {
-            \App\Models\User::where('role', 'administrateur')->each(function ($admin) use ($ticket) {
-                Notification::envoyer(
-                    $admin->id,
-                    "Nouveau ticket : {$ticket->titre}",
-                    'nouveau_ticket',
-                    $ticket->id
-                );
+            User::where('role', 'administrateur')->each(function ($admin) use ($ticket) {
+                $admin->notify(new TicketCreatedNotification($ticket));
             });
         }
 
@@ -158,12 +155,15 @@ class TicketController extends Controller
 
         // Notification si statut changé
         if ($ancienStatut !== $ticket->statut && $ticket->client) {
-            Notification::envoyer(
-                $ticket->client->user_id,
-                "Statut du ticket #{$ticket->id} changé : {$ancienStatut} → {$ticket->statut}",
-                'statut_change',
-                $ticket->id
-            );
+            // reuse SimpleNotification for status change
+            $user = User::find($ticket->client->user_id);
+            if ($user) {
+                $user->notify(new SimpleNotification(
+                    "Statut du ticket #{$ticket->id} changé : {$ancienStatut} → {$ticket->statut}",
+                    'statut_change',
+                    $ticket->id
+                ));
+            }
         }
 
         return response()->json([

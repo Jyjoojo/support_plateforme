@@ -53,10 +53,6 @@ class User extends Authenticatable implements PasskeyUser
         return $this->hasMany(Commentaire::class, 'auteur_id');
     }
 
-    public function notifications()
-    {
-        return $this->hasMany(Notification::class);
-    }
 
     public function statistiques()
     {

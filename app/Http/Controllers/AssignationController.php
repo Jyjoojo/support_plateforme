@@ -3,13 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Models\Assignation;
-use App\Models\Notification;
 use App\Models\Technicien;
 use App\Models\Ticket;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use App\Http\Resources\AssignationResource;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use App\Notifications\TicketAssignedNotification;
 
 class AssignationController extends Controller
 {
@@ -39,12 +40,9 @@ class AssignationController extends Controller
 
         // Notifier le technicien
         $technicien = Technicien::find($request->technicien_id);
-        Notification::envoyer(
-            $technicien->user_id,
-            "Ticket assigné : {$ticket->titre}",
-            'ticket_assigne',
-            $ticket->id
-        );
+        if ($technicien && $technicien->user) {
+            $technicien->user->notify(new TicketAssignedNotification($ticket, $assignation));
+        }
 
         return response()->json([
             'message'     => 'Ticket assigné avec succès.',
