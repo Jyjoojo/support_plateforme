@@ -10,15 +10,20 @@ class NotificationController extends Controller
     /** GET /api/notifications */
     public function index(Request $request): JsonResponse
     {
-        $notifications = $request->user()
-            ->notifications()
-            ->orderByDesc('created_at')
-            ->paginate(30);
+        $query = $request->user()->notifications();
 
-        return response()->json([
-            'data'     => $notifications,
-            'non_lues' => $request->user()->unreadNotifications()->count(),
-        ]);
+        // Permet de filtrer via /api/notifications?non_lues=true
+        if ($request->boolean('non_lues')) {
+            $query->unread();
+        }
+
+        $notifications = $query->latest()->paginate(30);
+
+        // Fusionner proprement les données de pagination avec notre variable personnalisée
+        $response = $notifications->toArray();
+        $response['total_non_lues'] = $request->user()->unreadNotifications()->count();
+
+        return response()->json($response);
     }
 
     /** PATCH /api/notifications/{id}/lire */

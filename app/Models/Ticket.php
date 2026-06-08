@@ -14,6 +14,12 @@ class Ticket extends Model
 {
     use HasFactory, HasUuids;
 
+    // Définir les valeurs par défaut des attributs lors de l'instanciation du modèle
+    protected $attributes = [
+        'statut'   => 'nouveau',
+        'priorite' => 'normale',
+    ];
+
     protected function casts(): array
     {
         return [

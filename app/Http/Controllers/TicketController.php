@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Ticket;
 use App\Models\User;
+use App\Models\Technicien;
+use App\Models\Client;
 use App\Notifications\TicketCreatedNotification;
 use App\Notifications\TicketStatusChangedNotification;
 
@@ -95,18 +97,18 @@ class TicketController extends Controller
         if ($user->isClient()) {
             $data['source_creation'] = 'client';
             $data['createur_id']     = $user->client->id;
-            $data['createur_type']   = \App\Models\Client::class;
+            $data['createur_type']   = Client::class;
             $data['client_id']       = $user->client->id;
         } elseif ($user->isTechnicien()) {
             $data['source_creation'] = 'technicien';
             $data['createur_id']     = $user->technicien->id;
-            $data['createur_type']   = \App\Models\Technicien::class;
+            $data['createur_type']   = Technicien::class;
             // client_id doit être fourni dans la requête pour un ticket créé par technicien
         } else {
             // Admin
             $data['source_creation'] = 'administrateur';
             $data['createur_id']     = $user->id;
-            $data['createur_type']   = \App\Models\User::class;
+            $data['createur_type']   = User::class;
         }
 
         $ticket = Ticket::create($data);
