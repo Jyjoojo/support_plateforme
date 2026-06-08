@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Ticket;
 use App\Models\User;
 use App\Notifications\TicketCreatedNotification;
-use App\Notifications\SimpleNotification;
+use App\Notifications\TicketStatusChangedNotification;
 
 use App\Http\Requests\StoreTicketRequest;
 use App\Http\Requests\UpdateTicketRequest;
@@ -155,14 +155,9 @@ class TicketController extends Controller
 
         // Notification si statut changé
         if ($ancienStatut !== $ticket->statut && $ticket->client) {
-            // reuse SimpleNotification for status change
             $user = User::find($ticket->client->user_id);
             if ($user) {
-                $user->notify(new SimpleNotification(
-                    "Statut du ticket #{$ticket->id} changé : {$ancienStatut} → {$ticket->statut}",
-                    'statut_change',
-                    $ticket->id
-                ));
+                $user->notify(new TicketStatusChangedNotification($ticket, $ancienStatut));
             }
         }
 
