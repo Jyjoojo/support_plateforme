@@ -31,13 +31,38 @@ class ArticleBaseController extends Controller
     public function index(Request $request): JsonResponse
     {
         $articles = ArticleBase::publies()
+        $user = $request->user();
+
+        // Vue Technicien/Admin : accès à tous les articles avec filtres
+        if ($user && ($user->isTechnicien() || $user->isAdmin())) {
+            $query = ArticleBase::query();
+
+            if ($request->boolean('only_archived')) {
+                $query->onlyTrashed();
+            } elseif ($request->boolean('with_archived')) {
+                $query->withTrashed();
+            }
+
+            $query->with(['technicien.user', 'categorie'])
+                ->when($request->filled('search'), fn($q) => $q->recherche($request->search))
+                ->when($request->filled('categorie_id'), fn($q) => $q->where('categorie_id', $request->categorie_id))
+                ->when($request->filled('publie'), fn($q) => $q->where('publie', $request->boolean('publie')))
+                ->orderByDesc('created_at');
+
+            return response()->json($query->paginate(20));
+        }
+
+        // Vue publique : uniquement les articles publiés et non archivés
+        $query = ArticleBase::publies()
             ->with(['technicien.user', 'categorie'])
             ->when($request->search, fn($q) => $q->recherche($request->search))
             ->when($request->categorie_id, fn($q) => $q->where('categorie_id', $request->categorie_id))
             ->orderByDesc('vues')
             ->paginate(15);
+            ->orderByDesc('vues');
 
         return response()->json($articles);
+        return response()->json($query->paginate(15));
     }
 
     /**
