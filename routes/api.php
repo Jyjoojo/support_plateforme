@@ -42,8 +42,6 @@ Route::prefix('auth')->group(function () {
 });
 
 // Base de connaissances : articles publiés accessibles sans compte
-Route::get('articles',      [ArticleBaseController::class, 'index']);
-Route::get('articles/{id}', [ArticleBaseController::class, 'show']);
 Route::get('articles',           [ArticleBaseController::class, 'index']);
 Route::get('articles/{article}', [ArticleBaseController::class, 'show']);
 
