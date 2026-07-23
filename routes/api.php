@@ -12,6 +12,7 @@ use App\Http\Controllers\AssignationController;
 use App\Http\Controllers\CategorieController;
 use App\Http\Controllers\StatistiqueController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\RapportController;
 
 /*
 |--------------------------------------------------------------------------
@@ -108,6 +109,13 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('statistiques',           [StatistiqueController::class, 'index']);
         Route::post('statistiques/generer',  [StatistiqueController::class, 'generer']);
         Route::get('statistiques/{id}',      [StatistiqueController::class, 'show']);
+
+        // Rapports et statistiques
+        Route::prefix('rapports')->group(function () {
+            Route::get('tickets', [RapportController::class, 'tickets']);
+            Route::get('base-de-connaissances', [RapportController::class, 'baseDeConnaissances']);
+            Route::get('clients', [RapportController::class, 'clients']);
+        });
 
         // Assignation manuelle par l'admin
         Route::post('tickets/{ticket}/assigner-technicien', [AssignationController::class, 'assignerParAdmin']);
