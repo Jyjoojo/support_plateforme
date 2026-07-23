@@ -3,8 +3,10 @@
 namespace Tests\Feature;
 
 use App\Models\ArticleBase;
+use App\Models\Assignation;
 use App\Models\Categorie;
 use App\Models\Client;
+use App\Models\Technicien;
 use App\Models\Ticket;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -94,5 +96,46 @@ class RapportTest extends TestCase
         $this->getJson('/api/rapports/clients?limite=0')
             ->assertUnprocessable()
             ->assertJsonValidationErrors(['limite']);
+    }
+
+    public function test_les_rapports_de_categorie_deux_exposent_evolution_resolution_et_charge(): void
+    {
+        Sanctum::actingAs(User::factory()->administrateur()->create());
+
+        $categorie = Categorie::factory()->create();
+        $technicien = Technicien::factory()->create();
+        $ticket = Ticket::factory()->create([
+            'categorie_id' => $categorie->id,
+            'statut' => 'resolu',
+            'created_at' => now()->subDays(2),
+            'date_resolution' => now()->subDay(),
+        ]);
+        Assignation::factory()->create([
+            'ticket_id' => $ticket->id,
+            'technicien_id' => $technicien->id,
+            'date_assignation' => now()->subDays(2),
+        ]);
+
+        $query = http_build_query([
+            'periode_debut' => now()->subDays(5)->toDateString(),
+            'periode_fin' => now()->toDateString(),
+            'categorie_id' => $categorie->id,
+            'technicien_id' => $technicien->id,
+            'granularite' => 'jour',
+        ]);
+
+        $this->getJson("/api/rapports/tickets?{$query}")
+            ->assertOk()
+            ->assertJsonPath('temps_resolution.global', 24)
+            ->assertJsonPath('temps_resolution.par_categorie.0.tickets_resolus', 1)
+            ->assertJsonFragment(['crees' => 1])
+            ->assertJsonFragment(['resolus' => 1]);
+
+        $this->getJson("/api/rapports/techniciens?{$query}")
+            ->assertOk()
+            ->assertJsonPath('charge.0.technicien_id', $technicien->id)
+            ->assertJsonPath('charge.0.tickets_assignes', 1)
+            ->assertJsonPath('charge.0.tickets_resolus', 1)
+            ->assertJsonPath('charge.0.taux_resolution', 100);
     }
 }

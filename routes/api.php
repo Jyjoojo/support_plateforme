@@ -115,6 +115,7 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('tickets', [RapportController::class, 'tickets']);
             Route::get('base-de-connaissances', [RapportController::class, 'baseDeConnaissances']);
             Route::get('clients', [RapportController::class, 'clients']);
+            Route::get('techniciens', [RapportController::class, 'techniciens']);
         });
 
         // Assignation manuelle par l'admin
