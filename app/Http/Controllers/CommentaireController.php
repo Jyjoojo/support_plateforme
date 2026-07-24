@@ -19,6 +19,8 @@ class CommentaireController extends Controller
      */
     public function index(Ticket $ticket): JsonResponse
     {
+        Gate::authorize('view', $ticket);
+
         $commentaires = $ticket->commentaires()
             ->with('auteur')
             ->orderBy('created_at')

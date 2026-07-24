@@ -14,6 +14,8 @@ class PieceJointeController extends Controller
     /** GET /api/tickets/{ticket}/pieces-jointes */
     public function index(Ticket $ticket): JsonResponse
     {
+        Gate::authorize('view', $ticket);
+
         return response()->json($ticket->piecesJointes);
     }
 
