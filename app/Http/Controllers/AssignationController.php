@@ -9,7 +9,10 @@ use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use App\Http\Resources\AssignationResource;
 use Illuminate\Http\Request;
+use Illuminate\Http\Exceptions\HttpResponseException;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Validation\ValidationException;
 use App\Notifications\TicketAssignedNotification;
 
 class AssignationController extends Controller
@@ -22,24 +25,46 @@ class AssignationController extends Controller
     {
         Gate::authorize('assigner', $ticket);
 
-        $request->validate([
+        $data = $request->validate([
             'technicien_id' => 'required|uuid|exists:techniciens,id',
             'motif'         => 'nullable|string|max:500',
         ]);
 
-        $assignation = Assignation::create([
-            'ticket_id'       => $ticket->id,
-            'technicien_id'   => $request->technicien_id,
-            'assigne_par_id'  => $request->user()->id,
-            'methode'         => 'manuelle',
-            'motif'           => $request->motif,
-            'date_assignation' => now(),
-        ]);
+        $assignation = DB::transaction(function () use ($request, $ticket, $data) {
+            $ticketVerrouille = Ticket::query()->lockForUpdate()->findOrFail($ticket->id);
+            Gate::authorize('assigner', $ticketVerrouille);
+            $assignationActive = $ticketVerrouille->assignationActive()->first();
 
-        $ticket->update(['statut' => 'en_cours']);
+            if ($request->user()->isTechnicien()) {
+                if (in_array($ticketVerrouille->statut, ['resolu', 'ferme'], true)) {
+                    throw ValidationException::withMessages([
+                        'ticket' => 'Un ticket résolu ou fermé ne peut pas être transféré.',
+                    ]);
+                }
+
+                if ($assignationActive?->technicien_id === $data['technicien_id']) {
+                    throw ValidationException::withMessages([
+                        'technicien_id' => 'Sélectionnez un autre technicien pour transférer le ticket.',
+                    ]);
+                }
+            }
+
+            $nouvelleAssignation = Assignation::create([
+                'ticket_id'        => $ticketVerrouille->id,
+                'technicien_id'    => $data['technicien_id'],
+                'assigne_par_id'   => $request->user()->id,
+                'methode'          => 'manuelle',
+                'motif'            => $data['motif'] ?? null,
+                'date_assignation' => now(),
+            ]);
+
+            $ticketVerrouille->update(['statut' => 'en_cours']);
+
+            return $nouvelleAssignation;
+        });
 
         // Notifier le technicien
-        $technicien = Technicien::find($request->technicien_id);
+        $technicien = Technicien::find($data['technicien_id']);
         if ($technicien && $technicien->user) {
             $technicien->user->notify(new TicketAssignedNotification($ticket, $assignation));
         }
@@ -62,15 +87,33 @@ class AssignationController extends Controller
             return response()->json(['message' => 'Réservé aux techniciens.'], 403);
         }
 
-        $assignation = Assignation::create([
-            'ticket_id'        => $ticket->id,
-            'technicien_id'    => $user->technicien->id,
-            'assigne_par_id'   => $user->id,
-            'methode'          => 'auto_assignation',
-            'date_assignation' => now(),
-        ]);
+        $assignation = DB::transaction(function () use ($user, $ticket) {
+            $ticketVerrouille = Ticket::query()->lockForUpdate()->findOrFail($ticket->id);
 
-        $ticket->update(['statut' => 'en_cours']);
+            if ($ticketVerrouille->assignations()->exists()) {
+                throw new HttpResponseException(response()->json([
+                    'message' => 'Ce ticket est déjà assigné.',
+                ], 409));
+            }
+
+            if (in_array($ticketVerrouille->statut, ['resolu', 'ferme'], true)) {
+                throw ValidationException::withMessages([
+                    'ticket' => 'Un ticket résolu ou fermé ne peut pas être pris en charge.',
+                ]);
+            }
+
+            $nouvelleAssignation = Assignation::create([
+                'ticket_id'        => $ticketVerrouille->id,
+                'technicien_id'    => $user->technicien->id,
+                'assigne_par_id'   => $user->id,
+                'methode'          => 'auto_assignation',
+                'date_assignation' => now(),
+            ]);
+
+            $ticketVerrouille->update(['statut' => 'en_cours']);
+
+            return $nouvelleAssignation;
+        });
 
         return response()->json([
             'message'     => 'Vous avez pris en charge ce ticket.',

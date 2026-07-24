@@ -20,6 +20,43 @@ use Illuminate\Support\Facades\Gate;
 class TicketController extends Controller
 {
     /**
+     * GET /api/tickets/non-assignes
+     * Liste des tickets ouverts encore disponibles à la prise en charge.
+     */
+    public function nonAssignes(Request $request): AnonymousResourceCollection
+    {
+        $query = Ticket::with(['client.user', 'categorie'])
+            ->whereDoesntHave('assignations')
+            ->whereNotIn('statut', ['resolu', 'ferme']);
+
+        if ($request->filled('statut')) {
+            $query->where('statut', $request->statut);
+        }
+        if ($request->filled('priorite')) {
+            $query->where('priorite', $request->priorite);
+        }
+        if ($request->filled('categorie_id')) {
+            $query->where('categorie_id', $request->categorie_id);
+        }
+        if ($request->filled('search')) {
+            $query->where(fn($q) =>
+                $q->where('titre', 'like', '%' . $request->search . '%')
+                    ->orWhere('description', 'like', '%' . $request->search . '%')
+            );
+        }
+
+        return TicketResource::collection(
+            $query->orderByRaw("CASE priorite
+                WHEN 'urgente' THEN 1
+                WHEN 'haute'   THEN 2
+                WHEN 'normale' THEN 3
+                WHEN 'basse'   THEN 4
+                END")
+                ->paginate(20)
+        );
+    }
+
+    /**
      * GET /api/tickets
      * Liste filtrée selon le rôle :
      *   - Client    → ses propres tickets
@@ -35,7 +72,7 @@ class TicketController extends Controller
         if ($user->isClient()) {
             $query->where('client_id', $user->client->id);
         } elseif ($user->isTechnicien()) {
-            $query->whereHas('assignations', fn($q) =>
+            $query->whereHas('assignationActive', fn($q) =>
                 $q->where('technicien_id', $user->technicien->id)
             );
         }

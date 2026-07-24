@@ -66,6 +66,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // ── Tickets ─────────────────────────────────────────────
     // Les policies contrôlent qui voit / modifie quoi
+    Route::get('tickets/non-assignes', [TicketController::class, 'nonAssignes'])
+        ->middleware('role:technicien,administrateur');
     Route::apiResource('tickets', TicketController::class);
 
     // Sous-ressources d'un ticket
@@ -88,7 +90,8 @@ Route::middleware('auth:sanctum')->group(function () {
     // ═══════════════════════════════════════════════════════
     Route::middleware('role:technicien,administrateur')->group(function () {
         // Auto-assignation d'un ticket par le technicien lui-même
-        Route::post('tickets/{ticket}/auto-assigner', [AssignationController::class, 'autoAssigner']);
+        Route::post('tickets/{ticket}/auto-assigner', [AssignationController::class, 'autoAssigner'])
+            ->middleware('role:technicien');
 
         // Gestion base de connaissances
         Route::apiResource('articles', ArticleBaseController::class)

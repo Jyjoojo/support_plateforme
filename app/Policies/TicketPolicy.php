@@ -29,10 +29,15 @@ class TicketPolicy
     public function view(User $user, Ticket $ticket): bool
     {
         if ($user->isTechnicien()) {
-            // Le technicien voit le ticket s'il y est assigné
-            return $ticket->assignations()
-                ->where('technicien_id', $user->technicien->id)
-                ->exists();
+            // Le technicien voit les tickets libres et celui dont il est
+            // actuellement responsable.
+            return (
+                !$ticket->assignations()->exists()
+                && !in_array($ticket->statut, ['resolu', 'ferme'], true)
+            )
+                || $ticket->assignationActive()
+                    ->where('technicien_id', $user->technicien->id)
+                    ->exists();
         }
 
         if ($user->isClient()) {
@@ -56,7 +61,7 @@ class TicketPolicy
     public function update(User $user, Ticket $ticket): bool
     {
         if ($user->isTechnicien()) {
-            return $ticket->assignations()
+            return $ticket->assignationActive()
                 ->where('technicien_id', $user->technicien->id)
                 ->exists();
         }
@@ -97,6 +102,12 @@ class TicketPolicy
     /** Assigner un technicien à un ticket */
     public function assigner(User $user, Ticket $ticket): bool
     {
-        return $user->isAdmin() || $user->isTechnicien();
+        if ($user->isTechnicien()) {
+            return $ticket->assignationActive()
+                ->where('technicien_id', $user->technicien->id)
+                ->exists();
+        }
+
+        return false;
     }
 }
