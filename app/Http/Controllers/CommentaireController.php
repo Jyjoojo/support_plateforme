@@ -74,8 +74,9 @@ class CommentaireController extends Controller
     /**
      * PATCH /api/commentaires/{commentaire}  (shallow route)
      */
-    public function update(Request $request, Commentaire $commentaire): JsonResponse
+    public function update(Request $request, Ticket $ticket, Commentaire $commentaire): JsonResponse
     {
+        abort_unless($commentaire->ticket_id === $ticket->id, 404);
         Gate::authorize('update', $commentaire);
 
         $commentaire->update($request->validate([
@@ -84,15 +85,16 @@ class CommentaireController extends Controller
 
         return response()->json([
             'message'     => 'Commentaire modifié.',
-            'commentaire' => new CommentaireResource($commentaire->fresh()),
+            'commentaire' => new CommentaireResource($commentaire->fresh()->load('auteur')),
         ]);
     }
 
     /**
      * DELETE /api/commentaires/{commentaire}  (shallow route)
      */
-    public function destroy(Request $request, Commentaire $commentaire): JsonResponse
+    public function destroy(Request $request, Ticket $ticket, Commentaire $commentaire): JsonResponse
     {
+        abort_unless($commentaire->ticket_id === $ticket->id, 404);
         Gate::authorize('delete', $commentaire);
         $commentaire->delete();
 

@@ -4,8 +4,10 @@ namespace App\Providers;
 
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
 use App\Models\Categorie;
+use App\Models\Commentaire;
 use App\Models\Ticket;
 use App\Policies\CategoriePolicy;
+use App\Policies\CommentairePolicy;
 use App\Policies\TicketPolicy;
 
 class AuthServiceProvider extends ServiceProvider
@@ -18,6 +20,7 @@ class AuthServiceProvider extends ServiceProvider
     protected $policies = [
         Ticket::class    => TicketPolicy::class,
         Categorie::class => CategoriePolicy::class,
+        Commentaire::class => CommentairePolicy::class,
     ];
 
     /**
