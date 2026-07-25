@@ -16,6 +16,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use App\Http\Resources\TicketResource;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Validation\ValidationException;
 
 class TicketController extends Controller
 {
@@ -218,15 +219,28 @@ class TicketController extends Controller
         return response()->json(['message' => 'Ticket supprimé.']);
     }
 
-    /**
-     * POST /api/tickets/{ticket}/fermer
-     */
+    /** POST /api/tickets/{ticket}/mettre-en-attente */
+    public function mettreEnAttente(Request $request, Ticket $ticket): JsonResponse
+    {
+        Gate::authorize('update', $ticket);
+
+        return $this->transitionner($ticket, ['en_cours'], 'en_attente', 'Ticket mis en attente.');
+    }
+
+    /** POST /api/tickets/{ticket}/reprendre */
+    public function reprendre(Request $request, Ticket $ticket): JsonResponse
+    {
+        Gate::authorize('update', $ticket);
+
+        return $this->transitionner($ticket, ['en_attente'], 'en_cours', 'Traitement du ticket repris.');
+    }
+
+    /** POST /api/tickets/{ticket}/fermer */
     public function fermer(Request $request, Ticket $ticket): JsonResponse
     {
         Gate::authorize('update', $ticket);
-        $ticket->fermer();
 
-        return response()->json(['message' => 'Ticket fermé.', 'ticket' => new TicketResource($ticket)]);
+        return $this->transitionner($ticket, ['resolu'], 'ferme', 'Ticket fermé.');
     }
 
     /**
@@ -235,8 +249,43 @@ class TicketController extends Controller
     public function reOuvrir(Request $request, Ticket $ticket): JsonResponse
     {
         Gate::authorize('update', $ticket);
-        $ticket->update(['statut' => 'en_cours']);
 
-        return response()->json(['message' => 'Ticket réouvert.', 'ticket' => new TicketResource($ticket)]);
+        return $this->transitionner(
+            $ticket,
+            ['resolu', 'ferme'],
+            'en_cours',
+            'Ticket réouvert.',
+            ['date_resolution' => null]
+        );
+    }
+
+    private function transitionner(
+        Ticket $ticket,
+        array $statutsAutorises,
+        string $nouveauStatut,
+        string $message,
+        array $attributsSupplementaires = []
+    ): JsonResponse {
+        if (!in_array($ticket->statut, $statutsAutorises, true)) {
+            throw ValidationException::withMessages([
+                'statut' => "Transition impossible depuis le statut « {$ticket->statut} ».",
+            ]);
+        }
+
+        $ancienStatut = $ticket->statut;
+        $ticket->update([
+            'statut' => $nouveauStatut,
+            ...$attributsSupplementaires,
+        ]);
+
+        if ($ticket->client) {
+            $client = User::find($ticket->client->user_id);
+            $client?->notify(new TicketStatusChangedNotification($ticket, $ancienStatut));
+        }
+
+        return response()->json([
+            'message' => $message,
+            'ticket' => new TicketResource($ticket->fresh()),
+        ]);
     }
 }

@@ -77,6 +77,8 @@ Route::middleware('auth:sanctum')->group(function () {
              ->only(['index', 'store', 'destroy'])
              ->shallow();
         Route::post('assignation',           [AssignationController::class, 'assigner']);
+        Route::post('mettre-en-attente',     [TicketController::class, 'mettreEnAttente']);
+        Route::post('reprendre',              [TicketController::class, 'reprendre']);
         Route::post('fermer',                [TicketController::class, 'fermer']);
         Route::post('reouvrir',              [TicketController::class, 'reOuvrir']);
     });

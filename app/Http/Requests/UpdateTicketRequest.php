@@ -36,7 +36,7 @@ class UpdateTicketRequest extends FormRequest
         // Technicien peut changer statut + priorité
         if ($user->isTechnicien()) {
             return [
-                'statut'   => 'sometimes|in:' . implode(',', Ticket::STATUTS),
+                'statut'   => 'prohibited',
                 'priorite' => 'sometimes|in:' . implode(',', Ticket::PRIORITES),
             ];
         }

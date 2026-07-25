@@ -9,6 +9,7 @@ use Illuminate\Http\JsonResponse;
 use App\Http\Resources\CommentaireResource;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Validation\ValidationException;
 use App\Notifications\TicketCommentedNotification;
 use App\Notifications\TicketResolvedNotification;
 
@@ -40,6 +41,13 @@ class CommentaireController extends Controller
             'contenu'      => 'required|string|min:2',
             'est_solution' => 'boolean',
         ]);
+
+        if (($data['est_solution'] ?? false)
+            && !in_array($ticket->statut, ['en_cours', 'en_attente'], true)) {
+            throw ValidationException::withMessages([
+                'est_solution' => 'Seul un ticket en cours ou en attente peut être résolu.',
+            ]);
+        }
 
         $commentaire = Commentaire::create([
             'ticket_id'    => $ticket->id,
