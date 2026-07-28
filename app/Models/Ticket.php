@@ -5,9 +5,9 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Concerns\HasUuids;
 
 #[Fillable(['titre', 'description', 'statut', 'priorite', 'source_creation', 'categorie_id', 'createur_id', 'createur_type', 'client_id', 'date_resolution'])]
 class Ticket extends Model
@@ -16,7 +16,7 @@ class Ticket extends Model
 
     // Définir les valeurs par défaut des attributs lors de l'instanciation du modèle
     protected $attributes = [
-        'statut'   => 'nouveau',
+        'statut' => 'nouveau',
         'priorite' => 'normale',
     ];
 
@@ -29,8 +29,18 @@ class Ticket extends Model
 
     // Valeurs possibles des enums (utile pour la validation)
     const STATUTS = ['nouveau', 'en_cours', 'en_attente', 'resolu', 'ferme'];
+
     const PRIORITES = ['basse', 'normale', 'haute', 'urgente'];
+
     const SOURCES = ['client', 'technicien', 'administrateur'];
+
+    private const TRANSITIONS_STATUT = [
+        'nouveau' => ['en_cours'],
+        'en_cours' => ['en_attente', 'resolu'],
+        'en_attente' => ['en_cours', 'resolu'],
+        'resolu' => ['ferme', 'en_cours'],
+        'ferme' => ['en_cours'],
+    ];
 
     // ─── Relations ───────────────────────────────────────────────
 
@@ -58,7 +68,7 @@ class Ticket extends Model
     // Dernière assignation active
     public function assignationActive()
     {
-        $relatedTable = (new Assignation())->getTable();
+        $relatedTable = (new Assignation)->getTable();
 
         return $this->hasOne(Assignation::class)
             ->whereRaw("{$relatedTable}.id = (
@@ -121,7 +131,16 @@ class Ticket extends Model
 
     public function estOuvert(): bool
     {
-        return !in_array($this->statut, ['resolu', 'ferme']);
+        return ! in_array($this->statut, ['resolu', 'ferme']);
+    }
+
+    public function peutTransitionnerVers(string $nouveauStatut): bool
+    {
+        return in_array(
+            $nouveauStatut,
+            self::TRANSITIONS_STATUT[$this->statut] ?? [],
+            true
+        );
     }
 
     public function fermer(): void
@@ -132,7 +151,7 @@ class Ticket extends Model
     public function resoudre(): void
     {
         $this->update([
-            'statut'          => 'resolu',
+            'statut' => 'resolu',
             'date_resolution' => now(),
         ]);
     }

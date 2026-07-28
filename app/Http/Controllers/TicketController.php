@@ -2,19 +2,18 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Ticket;
-use App\Models\User;
-use App\Models\Technicien;
-use App\Models\Client;
-use App\Notifications\TicketCreatedNotification;
-use App\Notifications\TicketStatusChangedNotification;
-
 use App\Http\Requests\StoreTicketRequest;
 use App\Http\Requests\UpdateTicketRequest;
-use Illuminate\Http\Request;
-use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use App\Http\Resources\TicketResource;
+use App\Models\Client;
+use App\Models\Technicien;
+use App\Models\Ticket;
+use App\Models\User;
+use App\Notifications\TicketCreatedNotification;
+use App\Notifications\TicketStatusChangedNotification;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
 
@@ -40,9 +39,8 @@ class TicketController extends Controller
             $query->where('categorie_id', $request->categorie_id);
         }
         if ($request->filled('search')) {
-            $query->where(fn($q) =>
-                $q->where('titre', 'like', '%' . $request->search . '%')
-                    ->orWhere('description', 'like', '%' . $request->search . '%')
+            $query->where(fn ($q) => $q->where('titre', 'like', '%'.$request->search.'%')
+                ->orWhere('description', 'like', '%'.$request->search.'%')
             );
         }
 
@@ -66,15 +64,14 @@ class TicketController extends Controller
      */
     public function index(Request $request): AnonymousResourceCollection
     {
-        $user  = $request->user();
+        $user = $request->user();
         $query = Ticket::with(['client.user', 'categorie', 'assignationActive.technicien.user']);
 
         // Filtrage par rôle
         if ($user->isClient()) {
             $query->where('client_id', $user->client->id);
         } elseif ($user->isTechnicien()) {
-            $query->whereHas('assignationActive', fn($q) =>
-                $q->where('technicien_id', $user->technicien->id)
+            $query->whereHas('assignationActive', fn ($q) => $q->where('technicien_id', $user->technicien->id)
             );
         }
         // Admin → tous les tickets
@@ -84,8 +81,7 @@ class TicketController extends Controller
             $query->whereHas('assignationActive');
         }
         if ($request->filled('technicien_id')) {
-            $query->whereHas('assignationActive', fn($q) =>
-                $q->where('technicien_id', $request->technicien_id)
+            $query->whereHas('assignationActive', fn ($q) => $q->where('technicien_id', $request->technicien_id)
             );
         }
         if ($request->filled('statut')) {
@@ -98,9 +94,8 @@ class TicketController extends Controller
             $query->where('categorie_id', $request->categorie_id);
         }
         if ($request->filled('search')) {
-            $query->where(fn($q) =>
-                $q->where('titre', 'like', '%' . $request->search . '%')
-                  ->orWhere('description', 'like', '%' . $request->search . '%')
+            $query->where(fn ($q) => $q->where('titre', 'like', '%'.$request->search.'%')
+                ->orWhere('description', 'like', '%'.$request->search.'%')
             );
         }
 
@@ -134,19 +129,19 @@ class TicketController extends Controller
         // Déterminer la source et le créateur selon le rôle
         if ($user->isClient()) {
             $data['source_creation'] = 'client';
-            $data['createur_id']     = $user->client->id;
-            $data['createur_type']   = Client::class;
-            $data['client_id']       = $user->client->id;
+            $data['createur_id'] = $user->client->id;
+            $data['createur_type'] = Client::class;
+            $data['client_id'] = $user->client->id;
         } elseif ($user->isTechnicien()) {
             $data['source_creation'] = 'technicien';
-            $data['createur_id']     = $user->technicien->id;
-            $data['createur_type']   = Technicien::class;
+            $data['createur_id'] = $user->technicien->id;
+            $data['createur_type'] = Technicien::class;
             // client_id doit être fourni dans la requête pour un ticket créé par technicien
         } else {
             // Admin
             $data['source_creation'] = 'administrateur';
-            $data['createur_id']     = $user->id;
-            $data['createur_type']   = User::class;
+            $data['createur_id'] = $user->id;
+            $data['createur_type'] = User::class;
         }
 
         $ticket = Ticket::create($data);
@@ -160,7 +155,7 @@ class TicketController extends Controller
 
         return response()->json([
             'message' => 'Ticket créé avec succès.',
-            'ticket'  => new TicketResource($ticket->load(['client.user', 'categorie'])),
+            'ticket' => new TicketResource($ticket->load(['client.user', 'categorie'])),
         ], 201);
     }
 
@@ -203,7 +198,7 @@ class TicketController extends Controller
 
         return response()->json([
             'message' => 'Ticket mis à jour.',
-            'ticket'  => new TicketResource($ticket->fresh()),
+            'ticket' => new TicketResource($ticket->fresh()),
         ]);
     }
 
@@ -266,7 +261,10 @@ class TicketController extends Controller
         string $message,
         array $attributsSupplementaires = []
     ): JsonResponse {
-        if (!in_array($ticket->statut, $statutsAutorises, true)) {
+        if (
+            ! in_array($ticket->statut, $statutsAutorises, true)
+            || ! $ticket->peutTransitionnerVers($nouveauStatut)
+        ) {
             throw ValidationException::withMessages([
                 'statut' => "Transition impossible depuis le statut « {$ticket->statut} ».",
             ]);

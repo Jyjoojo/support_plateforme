@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Database\Factories\StatistiqueFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -20,22 +21,21 @@ use Illuminate\Database\Eloquent\Model;
 ])]
 class Statistique extends Model
 {
-    /** @use HasFactory<\Database\Factories\StatistiqueFactory> */
+    /** @use HasFactory<StatistiqueFactory> */
     use HasFactory, HasUuids;
 
     protected function casts(): array
     {
         return [
-            'total_tickets'          => 'integer',
-            'tickets_resolus'        => 'integer',
-            'tickets_en_cours'       => 'integer',
+            'total_tickets' => 'integer',
+            'tickets_resolus' => 'integer',
+            'tickets_en_cours' => 'integer',
             'temps_moyen_resolution' => 'float',
-            'periode_debut'          => 'date',
-            'periode_fin'            => 'date',
+            'periode_debut' => 'date',
+            'periode_fin' => 'date',
         ];
     }
 
-    
     // ─── Relations ───────────────────────────────────────────────
 
     public function generePar()
@@ -60,16 +60,26 @@ class Statistique extends Model
         ?\DateTime $periodeDebut = null,
         ?\DateTime $periodeFin = null,
         ?string $clientId = null,
-        ?string $categorieId = null
+        ?string $categorieId = null,
+        ?object $query = null,
+        bool $enregistrer = true
     ): self {
-        $query = Ticket::query();
+        $query ??= Ticket::query();
 
-        if ($periodeDebut) $query->where('created_at', '>=', $periodeDebut);
-        if ($periodeFin)   $query->where('created_at', '<=', $periodeFin);
-        if ($clientId)     $query->where('client_id', $clientId);
-        if ($categorieId)  $query->where('categorie_id', $categorieId);
+        if ($periodeDebut) {
+            $query->where('created_at', '>=', $periodeDebut);
+        }
+        if ($periodeFin) {
+            $query->where('created_at', '<=', $periodeFin);
+        }
+        if ($clientId) {
+            $query->where('client_id', $clientId);
+        }
+        if ($categorieId) {
+            $query->where('categorie_id', $categorieId);
+        }
 
-        $total   = (clone $query)->count();
+        $total = (clone $query)->count();
         $resolus = (clone $query)->where('statut', 'resolu')->count();
         $enCours = (clone $query)->whereIn('statut', ['nouveau', 'en_cours', 'en_attente'])->count();
 
@@ -78,16 +88,18 @@ class Statistique extends Model
             ->selectRaw('AVG(EXTRACT(EPOCH FROM (date_resolution - created_at)) / 3600) as moyenne')
             ->value('moyenne');
 
-        return self::create([
-            'genere_par_id'          => $genereParId,
-            'total_tickets'          => $total,
-            'tickets_resolus'        => $resolus,
-            'tickets_en_cours'       => $enCours,
+        $attributs = [
+            'genere_par_id' => $genereParId,
+            'total_tickets' => $total,
+            'tickets_resolus' => $resolus,
+            'tickets_en_cours' => $enCours,
             'temps_moyen_resolution' => $tempsMoyen,
-            'periode_debut'          => $periodeDebut,
-            'periode_fin'            => $periodeFin,
-            'filtre_client_id'       => $clientId,
-            'filtre_categorie_id'    => $categorieId,
-        ]);
+            'periode_debut' => $periodeDebut,
+            'periode_fin' => $periodeFin,
+            'filtre_client_id' => $clientId,
+            'filtre_categorie_id' => $categorieId,
+        ];
+
+        return $enregistrer ? self::create($attributs) : new self($attributs);
     }
 }
