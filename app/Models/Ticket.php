@@ -14,6 +14,14 @@ class Ticket extends Model
 {
     use HasFactory, HasUuids;
 
+    protected static function booted(): void
+    {
+        static::created(function (Ticket $ticket): void {
+            // Le trigger PostgreSQL renseigne la référence pendant l'insertion.
+            $ticket->refresh();
+        });
+    }
+
     // Définir les valeurs par défaut des attributs lors de l'instanciation du modèle
     protected $attributes = [
         'statut' => 'nouveau',
@@ -23,6 +31,8 @@ class Ticket extends Model
     protected function casts(): array
     {
         return [
+            'annee' => 'integer',
+            'numero' => 'integer',
             'date_resolution' => 'datetime',
         ];
     }
