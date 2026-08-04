@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -13,6 +14,8 @@ use Illuminate\Database\Eloquent\Model;
 class Ticket extends Model
 {
     use HasFactory, HasUuids;
+
+    protected $appends = ['reference'];
 
     protected static function booted(): void
     {
@@ -35,6 +38,13 @@ class Ticket extends Model
             'numero' => 'integer',
             'date_resolution' => 'datetime',
         ];
+    }
+
+    protected function reference(): Attribute
+    {
+        return Attribute::get(
+            fn () => sprintf('TK%02d-%04d', $this->annee % 100, $this->numero)
+        );
     }
 
     // Valeurs possibles des enums (utile pour la validation)

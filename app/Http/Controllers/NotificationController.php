@@ -2,8 +2,11 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
+use App\Http\Resources\NotificationResource;
+use App\Notifications\TicketCommentedNotification;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class NotificationController extends Controller
 {
@@ -24,6 +27,19 @@ class NotificationController extends Controller
         $response['total_non_lues'] = $request->user()->unreadNotifications()->count();
 
         return response()->json($response);
+    }
+
+    /** GET /api/notifications/messages */
+    public function messages(Request $request): AnonymousResourceCollection
+    {
+        $notifications = $request->user()
+            ->notifications()
+            ->where('type', TicketCommentedNotification::class)
+            ->latest()
+            ->limit(5)
+            ->get();
+
+        return NotificationResource::collection($notifications);
     }
 
     /** PATCH /api/notifications/{id}/lire */
