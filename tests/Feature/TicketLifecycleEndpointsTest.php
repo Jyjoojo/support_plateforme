@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Assignation;
 use App\Models\Technicien;
 use App\Models\Ticket;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
@@ -34,8 +35,9 @@ class TicketLifecycleEndpointsTest extends TestCase
 
     public function test_un_ticket_resolu_peut_etre_ferme_puis_reouvert(): void
     {
-        [$technicien, $ticket] = $this->ticketAssigne('resolu');
-        Sanctum::actingAs($technicien->user);
+        $admin = User::factory()->administrateur()->create();
+        [, $ticket] = $this->ticketAssigne('resolu');
+        Sanctum::actingAs($admin);
 
         $this->postJson("/api/tickets/{$ticket->id}/fermer")
             ->assertOk()
@@ -58,8 +60,7 @@ class TicketLifecycleEndpointsTest extends TestCase
         Sanctum::actingAs($technicien->user);
 
         $this->postJson("/api/tickets/{$ticket->id}/fermer")
-            ->assertUnprocessable()
-            ->assertJsonValidationErrors('statut');
+            ->assertForbidden();
 
         $this->postJson("/api/tickets/{$ticket->id}/reouvrir")
             ->assertUnprocessable()

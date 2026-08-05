@@ -23,6 +23,11 @@ class TicketResource extends JsonResource
             'priorite' => $this->priorite,
             'source_creation' => $this->source_creation,
             'date_resolution' => $this->date_resolution?->toDateTimeString(),
+            'attend_validation_client' => $this->statut === 'en_attente'
+                && $this->commentaires()->where('est_solution', true)
+                    ->whereNull('solution_validee_at')
+                    ->whereNull('solution_rejetee_at')
+                    ->exists(),
             'created_at' => $this->created_at?->toDateTimeString(),
             'updated_at' => $this->updated_at?->toDateTimeString(),
 

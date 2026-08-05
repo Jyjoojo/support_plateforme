@@ -5,15 +5,19 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreTicketRequest;
 use App\Http\Requests\UpdateTicketRequest;
 use App\Http\Resources\TicketResource;
+use App\Models\ArticleBase;
 use App\Models\Client;
+use App\Models\Commentaire;
 use App\Models\Technicien;
 use App\Models\Ticket;
 use App\Models\User;
 use App\Notifications\TicketCreatedNotification;
+use App\Notifications\TicketResolvedNotification;
 use App\Notifications\TicketStatusChangedNotification;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
 
@@ -233,7 +237,7 @@ class TicketController extends Controller
     /** POST /api/tickets/{ticket}/fermer */
     public function fermer(Request $request, Ticket $ticket): JsonResponse
     {
-        Gate::authorize('update', $ticket);
+        Gate::authorize('fermer', $ticket);
 
         return $this->transitionner($ticket, ['resolu'], 'ferme', 'Ticket fermé.');
     }
@@ -254,6 +258,97 @@ class TicketController extends Controller
         );
     }
 
+    /** POST /api/tickets/{ticket}/confirmer-resolution */
+    public function confirmerResolution(Request $request, Ticket $ticket): JsonResponse
+    {
+        Gate::authorize('confirmerResolution', $ticket);
+
+        $solution = $this->solutionEnAttente($ticket);
+
+        DB::transaction(function () use ($request, $ticket, $solution) {
+            $ticket->resoudre();
+            $solution->update([
+                'solution_validee_at' => now(),
+                'solution_validee_par_id' => $request->user()->id,
+            ]);
+
+            ArticleBase::firstOrCreate(
+                ['commentaire_solution_id' => $solution->id],
+                [
+                    'ticket_id' => $ticket->id,
+                    'technicien_id' => $solution->auteur?->technicien?->id,
+                    'categorie_id' => $ticket->categorie_id,
+                    'titre' => $ticket->titre,
+                    'contenu' => $solution->contenu,
+                    'publie' => false,
+                ]
+            );
+        });
+
+        $technicien = $ticket->assignationActive?->technicien?->user;
+        $technicien?->notify(new TicketResolvedNotification($ticket));
+
+        return response()->json([
+            'message' => 'Résolution confirmée. Un brouillon a été créé dans la base de connaissances.',
+            'ticket' => new TicketResource($ticket->fresh()),
+        ]);
+    }
+
+    /** POST /api/tickets/{ticket}/refuser-solution */
+    public function refuserSolution(Request $request, Ticket $ticket): JsonResponse
+    {
+        Gate::authorize('refuserSolution', $ticket);
+
+        $data = $request->validate([
+            'motif' => 'required|string|min:5|max:2000',
+        ]);
+        $solution = $this->solutionEnAttente($ticket);
+
+        DB::transaction(function () use ($request, $ticket, $solution, $data) {
+            $solution->update(['solution_rejetee_at' => now()]);
+            Commentaire::create([
+                'ticket_id' => $ticket->id,
+                'auteur_id' => $request->user()->id,
+                'contenu' => $data['motif'],
+                'est_solution' => false,
+            ]);
+            $ticket->reprendre();
+        });
+
+        $ancienStatut = 'en_attente';
+        $technicien = $ticket->assignationActive?->technicien?->user;
+        $technicien?->notify(new TicketStatusChangedNotification($ticket, $ancienStatut));
+
+        return response()->json([
+            'message' => 'Le ticket repasse en cours de traitement.',
+            'ticket' => new TicketResource($ticket->fresh()),
+        ]);
+    }
+
+    private function solutionEnAttente(Ticket $ticket): Commentaire
+    {
+        if ($ticket->statut !== 'en_attente') {
+            throw ValidationException::withMessages([
+                'statut' => 'Le ticket doit être en attente de validation.',
+            ]);
+        }
+
+        $solution = $ticket->commentaires()
+            ->where('est_solution', true)
+            ->whereNull('solution_validee_at')
+            ->whereNull('solution_rejetee_at')
+            ->latest('created_at')
+            ->first();
+
+        if (! $solution) {
+            throw ValidationException::withMessages([
+                'solution' => 'Aucune proposition de solution ne doit être validée.',
+            ]);
+        }
+
+        return $solution;
+    }
+
     private function transitionner(
         Ticket $ticket,
         array $statutsAutorises,
@@ -271,10 +366,20 @@ class TicketController extends Controller
         }
 
         $ancienStatut = $ticket->statut;
-        $ticket->update([
-            'statut' => $nouveauStatut,
-            ...$attributsSupplementaires,
-        ]);
+        if ($nouveauStatut === 'en_attente') {
+            $ticket->mettreEnAttente();
+        } elseif ($nouveauStatut === 'en_cours' && in_array($ancienStatut, ['resolu', 'ferme'], true)) {
+            $ticket->rouvrir();
+        } elseif ($nouveauStatut === 'en_cours') {
+            $ticket->reprendre();
+        } elseif ($nouveauStatut === 'ferme') {
+            $ticket->fermer();
+        } else {
+            $ticket->update([
+                'statut' => $nouveauStatut,
+                ...$attributsSupplementaires,
+            ]);
+        }
 
         if ($ticket->client) {
             $client = User::find($ticket->client->user_id);

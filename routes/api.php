@@ -1,18 +1,18 @@
 <?php
 
+use App\Http\Controllers\ArticleBaseController;
+use App\Http\Controllers\AssignationController;
+use App\Http\Controllers\AuthController;
+use App\Http\Controllers\CategorieController;
+use App\Http\Controllers\CommentaireController;
+use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\PieceJointeController;
+use App\Http\Controllers\RapportController;
+use App\Http\Controllers\StatistiqueController;
+use App\Http\Controllers\TicketController;
+use App\Http\Controllers\UserController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\AuthController;
-use App\Http\Controllers\ArticleBaseController;
-use App\Http\Controllers\NotificationController;
-use App\Http\Controllers\TicketController;
-use App\Http\Controllers\CommentaireController;
-use App\Http\Controllers\PieceJointeController;
-use App\Http\Controllers\AssignationController;
-use App\Http\Controllers\CategorieController;
-use App\Http\Controllers\StatistiqueController;
-use App\Http\Controllers\UserController;
-use App\Http\Controllers\RapportController;
 
 /*
 |--------------------------------------------------------------------------
@@ -25,9 +25,10 @@ use App\Http\Controllers\RapportController;
 // Swagger documentation endpoint
 Route::get('/docs', function () {
     $docsPath = storage_path('api-docs/api-docs.json');
-    if (!file_exists($docsPath)) {
+    if (! file_exists($docsPath)) {
         return response()->json(['error' => 'Documentation not found'], 404);
     }
+
     return response()->file($docsPath, [
         'Content-Type' => 'application/json',
     ]);
@@ -37,13 +38,13 @@ Route::get('/docs', function () {
 // ROUTES PUBLIQUES — sans authentification
 // ═══════════════════════════════════════════════════════════
 Route::prefix('auth')->group(function () {
-    Route::post('login',          [AuthController::class, 'login']);
-    Route::post('forgot-password',[AuthController::class, 'forgotPassword']);
+    Route::post('login', [AuthController::class, 'login']);
+    Route::post('forgot-password', [AuthController::class, 'forgotPassword']);
     Route::post('reset-password', [AuthController::class, 'resetPassword']);
 });
 
 // Base de connaissances : articles publiés accessibles sans compte
-Route::get('articles',           [ArticleBaseController::class, 'index']);
+Route::get('articles', [ArticleBaseController::class, 'index']);
 Route::get('articles/{article}', [ArticleBaseController::class, 'show']);
 
 // ═══════════════════════════════════════════════════════════
@@ -52,17 +53,17 @@ Route::get('articles/{article}', [ArticleBaseController::class, 'show']);
 Route::middleware('auth:sanctum')->group(function () {
 
     // ── Auth ────────────────────────────────────────────────
-    Route::post('auth/logout',  [AuthController::class, 'logout']);
-    Route::get('auth/me',       [AuthController::class, 'me']);
+    Route::post('auth/logout', [AuthController::class, 'logout']);
+    Route::get('auth/me', [AuthController::class, 'me']);
     Route::patch('auth/profil', [AuthController::class, 'updateProfil']);
 
     // ── Notifications (propres à l'utilisateur connecté) ────
     Route::prefix('notifications')->group(function () {
-        Route::get('/',                           [NotificationController::class, 'index']);
-        Route::get('messages',                    [NotificationController::class, 'messages']);
-        Route::patch('{id}/lire',                 [NotificationController::class, 'marquerLue']);
-        Route::post('tout-lire',                  [NotificationController::class, 'toutMarquerLu']);
-        Route::delete('{id}',                     [NotificationController::class, 'destroy']);
+        Route::get('/', [NotificationController::class, 'index']);
+        Route::get('messages', [NotificationController::class, 'messages']);
+        Route::patch('{id}/lire', [NotificationController::class, 'marquerLue']);
+        Route::post('tout-lire', [NotificationController::class, 'toutMarquerLu']);
+        Route::delete('{id}', [NotificationController::class, 'destroy']);
     });
 
     // ── Tickets ─────────────────────────────────────────────
@@ -73,20 +74,22 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Sous-ressources d'un ticket
     Route::prefix('tickets/{ticket}')->group(function () {
-        Route::apiResource('commentaires',   CommentaireController::class)->shallow();
+        Route::apiResource('commentaires', CommentaireController::class)->shallow();
         Route::apiResource('pieces-jointes', PieceJointeController::class)
-             ->only(['index', 'store', 'destroy'])
-             ->shallow();
-        Route::post('assignation',           [AssignationController::class, 'assigner']);
-        Route::post('mettre-en-attente',     [TicketController::class, 'mettreEnAttente']);
-        Route::post('reprendre',              [TicketController::class, 'reprendre']);
-        Route::post('fermer',                [TicketController::class, 'fermer']);
-        Route::post('reouvrir',              [TicketController::class, 'reOuvrir']);
+            ->only(['index', 'store', 'destroy'])
+            ->shallow();
+        Route::post('assignation', [AssignationController::class, 'assigner']);
+        Route::post('mettre-en-attente', [TicketController::class, 'mettreEnAttente']);
+        Route::post('reprendre', [TicketController::class, 'reprendre']);
+        Route::post('fermer', [TicketController::class, 'fermer']);
+        Route::post('reouvrir', [TicketController::class, 'reOuvrir']);
+        Route::post('confirmer-resolution', [TicketController::class, 'confirmerResolution']);
+        Route::post('refuser-solution', [TicketController::class, 'refuserSolution']);
     });
 
     // ── Catégories ─────────────────────────────────────────
     Route::apiResource('categories', CategorieController::class)
-         ->parameters(['categories' => 'categorie']);
+        ->parameters(['categories' => 'categorie']);
 
     // ═══════════════════════════════════════════════════════
     // ROUTES TECHNICIEN — rôles : technicien + administrateur
@@ -98,8 +101,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
         // Gestion base de connaissances
         Route::apiResource('articles', ArticleBaseController::class)
-             ->except(['index', 'show']); // index/show déjà définis en public
-        Route::post('articles/{article}/publier',  [ArticleBaseController::class, 'publier']);
+            ->except(['index', 'show']); // index/show déjà définis en public
+        Route::post('articles/{article}/publier', [ArticleBaseController::class, 'publier']);
         Route::post('articles/{article}/archiver', [ArticleBaseController::class, 'archiver']);
     });
 
@@ -112,9 +115,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::patch('users/{user}/toggle-actif', [UserController::class, 'toggleActif']);
 
         // Statistiques
-        Route::get('statistiques',           [StatistiqueController::class, 'index']);
-        Route::post('statistiques/generer',  [StatistiqueController::class, 'generer']);
-        Route::get('statistiques/{id}',      [StatistiqueController::class, 'show']);
+        Route::get('statistiques', [StatistiqueController::class, 'index']);
+        Route::post('statistiques/generer', [StatistiqueController::class, 'generer']);
+        Route::get('statistiques/{id}', [StatistiqueController::class, 'show']);
 
         // Rapports et statistiques
         Route::prefix('rapports')->group(function () {

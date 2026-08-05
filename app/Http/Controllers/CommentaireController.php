@@ -2,16 +2,17 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Resources\CommentaireResource;
 use App\Models\Commentaire;
 use App\Models\Ticket;
 use App\Models\User;
+use App\Notifications\TicketCommentedNotification;
+use App\Notifications\TicketSolutionProposedNotification;
 use Illuminate\Http\JsonResponse;
-use App\Http\Resources\CommentaireResource;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
-use App\Notifications\TicketCommentedNotification;
-use App\Notifications\TicketResolvedNotification;
 
 class CommentaireController extends Controller
 {
@@ -38,36 +39,55 @@ class CommentaireController extends Controller
         Gate::authorize('view', $ticket); // peut voir = peut commenter
 
         $data = $request->validate([
-            'contenu'      => 'required|string|min:2',
+            'contenu' => 'required|string|min:2',
             'est_solution' => 'boolean',
         ]);
 
         if (($data['est_solution'] ?? false)
-            && !in_array($ticket->statut, ['en_cours', 'en_attente'], true)) {
+            && ! in_array($ticket->statut, ['en_cours', 'en_attente'], true)) {
             throw ValidationException::withMessages([
                 'est_solution' => 'Seul un ticket en cours ou en attente peut être résolu.',
             ]);
         }
 
-        $commentaire = Commentaire::create([
-            'ticket_id'    => $ticket->id,
-            'auteur_id'    => $request->user()->id,
-            'contenu'      => $data['contenu'],
-            'est_solution' => $data['est_solution'] ?? false,
-        ]);
+        if ($data['est_solution'] ?? false) {
+            Gate::authorize('proposerSolution', $ticket);
 
-        // Si marqué comme solution → résoudre le ticket
-        if ($commentaire->est_solution) {
-            $ticket->resoudre();
-            $this->notifierTicketResolu($ticket, $commentaire);
+            if ($ticket->commentaires()->where('est_solution', true)
+                ->whereNull('solution_validee_at')->whereNull('solution_rejetee_at')->exists()) {
+                throw ValidationException::withMessages([
+                    'est_solution' => 'Une solution attend déjà la validation du client.',
+                ]);
+            }
         }
 
-        // Notifier les parties prenantes (client + technicien assigné)
-        $this->notifierNouveauCommentaire($ticket, $commentaire);
+        $commentaire = DB::transaction(function () use ($request, $ticket, $data) {
+            $commentaire = Commentaire::create([
+                'ticket_id' => $ticket->id,
+                'auteur_id' => $request->user()->id,
+                'contenu' => $data['contenu'],
+                'est_solution' => $data['est_solution'] ?? false,
+            ]);
+
+            if ($commentaire->est_solution && $ticket->statut === 'en_cours') {
+                $ticket->mettreEnAttente();
+            }
+
+            return $commentaire;
+        });
+
+        if ($commentaire->est_solution && $ticket->client?->user) {
+            $ticket->client->user->notify(new TicketSolutionProposedNotification($ticket, $commentaire));
+        }
+
+        // La proposition possède sa propre notification avec les actions de validation.
+        if (! $commentaire->est_solution) {
+            $this->notifierNouveauCommentaire($ticket, $commentaire);
+        }
 
         return response()->json([
-            'message'      => 'Commentaire ajouté.',
-            'commentaire'  => new CommentaireResource($commentaire->load('auteur')),
+            'message' => 'Commentaire ajouté.',
+            'commentaire' => new CommentaireResource($commentaire->load('auteur')),
         ], 201);
     }
 
@@ -84,7 +104,7 @@ class CommentaireController extends Controller
         ]));
 
         return response()->json([
-            'message'     => 'Commentaire modifié.',
+            'message' => 'Commentaire modifié.',
             'commentaire' => new CommentaireResource($commentaire->fresh()->load('auteur')),
         ]);
     }
@@ -121,28 +141,6 @@ class CommentaireController extends Controller
             $user = User::find($userId);
             if ($user) {
                 $user->notify(new TicketCommentedNotification($ticket, $commentaire));
-            }
-        }
-    }
-
-    private function notifierTicketResolu(Ticket $ticket, Commentaire $commentaire): void
-    {
-        $destinataires = [];
-        $auteurId = $commentaire->auteur_id;
-
-        if ($ticket->client && $ticket->client->user_id !== $auteurId) {
-            $destinataires[] = $ticket->client->user_id;
-        }
-
-        $assignation = $ticket->assignationActive;
-        if ($assignation && $assignation->technicien->user_id !== $auteurId) {
-            $destinataires[] = $assignation->technicien->user_id;
-        }
-
-        foreach ($destinataires as $userId) {
-            $user = User::find($userId);
-            if ($user) {
-                $user->notify(new TicketResolvedNotification($ticket));
             }
         }
     }

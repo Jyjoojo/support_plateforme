@@ -2,18 +2,17 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Resources\AssignationResource;
 use App\Models\Assignation;
 use App\Models\Technicien;
 use App\Models\Ticket;
-use App\Models\User;
-use Illuminate\Http\JsonResponse;
-use App\Http\Resources\AssignationResource;
-use Illuminate\Http\Request;
+use App\Notifications\TicketAssignedNotification;
 use Illuminate\Http\Exceptions\HttpResponseException;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
-use App\Notifications\TicketAssignedNotification;
 
 class AssignationController extends Controller
 {
@@ -27,7 +26,7 @@ class AssignationController extends Controller
 
         $data = $request->validate([
             'technicien_id' => 'required|uuid|exists:techniciens,id',
-            'motif'         => 'nullable|string|max:500',
+            'motif' => 'nullable|string|max:500',
         ]);
 
         $assignation = DB::transaction(function () use ($request, $ticket, $data) {
@@ -50,15 +49,15 @@ class AssignationController extends Controller
             }
 
             $nouvelleAssignation = Assignation::create([
-                'ticket_id'        => $ticketVerrouille->id,
-                'technicien_id'    => $data['technicien_id'],
-                'assigne_par_id'   => $request->user()->id,
-                'methode'          => 'manuelle',
-                'motif'            => $data['motif'] ?? null,
+                'ticket_id' => $ticketVerrouille->id,
+                'technicien_id' => $data['technicien_id'],
+                'assigne_par_id' => $request->user()->id,
+                'methode' => 'manuelle',
+                'motif' => $data['motif'] ?? null,
                 'date_assignation' => now(),
             ]);
 
-            $ticketVerrouille->update(['statut' => 'en_cours']);
+            $ticketVerrouille->update(['statut' => 'en_cours', 'date_resolution' => null]);
 
             return $nouvelleAssignation;
         });
@@ -70,7 +69,7 @@ class AssignationController extends Controller
         }
 
         return response()->json([
-            'message'     => 'Ticket assigné avec succès.',
+            'message' => 'Ticket assigné avec succès.',
             'assignation' => new AssignationResource($assignation->load('technicien.user')),
         ], 201);
     }
@@ -83,7 +82,7 @@ class AssignationController extends Controller
     {
         $user = $request->user();
 
-        if (!$user->isTechnicien()) {
+        if (! $user->isTechnicien()) {
             return response()->json(['message' => 'Réservé aux techniciens.'], 403);
         }
 
@@ -103,20 +102,20 @@ class AssignationController extends Controller
             }
 
             $nouvelleAssignation = Assignation::create([
-                'ticket_id'        => $ticketVerrouille->id,
-                'technicien_id'    => $user->technicien->id,
-                'assigne_par_id'   => $user->id,
-                'methode'          => 'auto_assignation',
+                'ticket_id' => $ticketVerrouille->id,
+                'technicien_id' => $user->technicien->id,
+                'assigne_par_id' => $user->id,
+                'methode' => 'auto_assignation',
                 'date_assignation' => now(),
             ]);
 
-            $ticketVerrouille->update(['statut' => 'en_cours']);
+            $ticketVerrouille->update(['statut' => 'en_cours', 'date_resolution' => null]);
 
             return $nouvelleAssignation;
         });
 
         return response()->json([
-            'message'     => 'Vous avez pris en charge ce ticket.',
+            'message' => 'Vous avez pris en charge ce ticket.',
             'assignation' => new AssignationResource($assignation),
         ], 201);
     }

@@ -28,7 +28,7 @@ class TicketStatusTransitionTest extends TestCase
             'nouveau vers en cours' => ['nouveau', 'en_cours', true],
             'nouveau vers resolu interdit' => ['nouveau', 'resolu', false],
             'en cours vers en attente' => ['en_cours', 'en_attente', true],
-            'en cours vers resolu' => ['en_cours', 'resolu', true],
+            'en cours vers resolu interdit' => ['en_cours', 'resolu', false],
             'resolu vers ferme' => ['resolu', 'ferme', true],
             'statut inconnu' => ['inconnu', 'en_cours', false],
         ];

@@ -56,7 +56,7 @@ class Ticket extends Model
 
     private const TRANSITIONS_STATUT = [
         'nouveau' => ['en_cours'],
-        'en_cours' => ['en_attente', 'resolu'],
+        'en_cours' => ['en_attente'],
         'en_attente' => ['en_cours', 'resolu'],
         'resolu' => ['ferme', 'en_cours'],
         'ferme' => ['en_cours'],
@@ -165,14 +165,49 @@ class Ticket extends Model
 
     public function fermer(): void
     {
+        if (! $this->peutTransitionnerVers('ferme')) {
+            throw new \DomainException('Le ticket doit être résolu avant sa fermeture.');
+        }
+
         $this->update(['statut' => 'ferme']);
+    }
+
+    public function mettreEnAttente(): void
+    {
+        if ($this->statut !== 'en_cours') {
+            throw new \DomainException('Seul un ticket en cours peut être mis en attente.');
+        }
+
+        $this->update(['statut' => 'en_attente', 'date_resolution' => null]);
+    }
+
+    public function reprendre(): void
+    {
+        if ($this->statut !== 'en_attente') {
+            throw new \DomainException('Seul un ticket en attente peut être repris.');
+        }
+
+        $this->update(['statut' => 'en_cours', 'date_resolution' => null]);
     }
 
     public function resoudre(): void
     {
+        if ($this->statut !== 'en_attente') {
+            throw new \DomainException('Le ticket doit être en attente de validation.');
+        }
+
         $this->update([
             'statut' => 'resolu',
             'date_resolution' => now(),
         ]);
+    }
+
+    public function rouvrir(): void
+    {
+        if (! in_array($this->statut, ['resolu', 'ferme'], true)) {
+            throw new \DomainException('Seul un ticket résolu ou fermé peut être rouvert.');
+        }
+
+        $this->update(['statut' => 'en_cours', 'date_resolution' => null]);
     }
 }

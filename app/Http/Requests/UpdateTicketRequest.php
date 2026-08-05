@@ -28,7 +28,7 @@ class UpdateTicketRequest extends FormRequest
         // Client ne peut modifier que titre/description (si ticket encore nouveau)
         if ($user->isClient()) {
             return [
-                'titre'       => 'sometimes|string|min:5|max:255',
+                'titre' => 'sometimes|string|min:5|max:255',
                 'description' => 'sometimes|string|min:10',
             ];
         }
@@ -36,18 +36,17 @@ class UpdateTicketRequest extends FormRequest
         // Technicien peut changer statut + priorité
         if ($user->isTechnicien()) {
             return [
-                'statut'   => 'prohibited',
-                'priorite' => 'sometimes|in:' . implode(',', Ticket::PRIORITES),
+                'statut' => 'prohibited',
+                'priorite' => 'sometimes|in:'.implode(',', Ticket::PRIORITES),
             ];
         }
 
         // Admin : tout modifier
         return [
-            //
-            'titre'        => 'sometimes|string|min:5|max:255',
-            'description'  => 'sometimes|string|min:10',
-            'statut'       => 'sometimes|in:' . implode(',', Ticket::STATUTS),
-            'priorite'     => 'sometimes|in:' . implode(',', Ticket::PRIORITES),
+            'titre' => 'sometimes|string|min:5|max:255',
+            'description' => 'sometimes|string|min:10',
+            'statut' => 'prohibited',
+            'priorite' => 'sometimes|in:'.implode(',', Ticket::PRIORITES),
             'categorie_id' => 'nullable|uuid|exists:categories,id',
         ];
     }

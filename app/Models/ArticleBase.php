@@ -2,8 +2,8 @@
 
 namespace App\Models;
 
+use Database\Factories\ArticleBaseFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
-use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -19,17 +19,19 @@ use Illuminate\Database\Eloquent\SoftDeletes;
     'mots_cles',
     'vues',
     'publie',
+    'ticket_id',
+    'commentaire_solution_id',
 ])]
 class ArticleBase extends Model
 {
-    /** @use HasFactory<\Database\Factories\ArticleBaseFactory> */
+    /** @use HasFactory<ArticleBaseFactory> */
     use HasFactory, HasUuids, SoftDeletes;
 
     protected function casts(): array
     {
         return [
             'publie' => 'boolean',
-            'vues'   => 'integer',
+            'vues' => 'integer',
         ];
     }
 
@@ -43,6 +45,16 @@ class ArticleBase extends Model
     public function categorie(): BelongsTo
     {
         return $this->belongsTo(Categorie::class);
+    }
+
+    public function ticket(): BelongsTo
+    {
+        return $this->belongsTo(Ticket::class);
+    }
+
+    public function commentaireSolution(): BelongsTo
+    {
+        return $this->belongsTo(Commentaire::class, 'commentaire_solution_id');
     }
 
     // ─── Scopes ──────────────────────────────────────────────────
@@ -76,7 +88,10 @@ class ArticleBase extends Model
 
     public function getMotsClesArrayAttribute(): array
     {
-        if (!$this->mots_cles) return [];
+        if (! $this->mots_cles) {
+            return [];
+        }
+
         return array_map('trim', explode(',', $this->mots_cles));
     }
 }
