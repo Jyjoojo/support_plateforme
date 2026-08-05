@@ -57,6 +57,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('auth/me', [AuthController::class, 'me']);
     Route::patch('auth/profil', [AuthController::class, 'updateProfil']);
 
+    // Résolutions personnelles du client (articles publiés ou brouillons)
+    Route::get('client/resolutions', [ArticleBaseController::class, 'resolutionsClient']);
+
     // ── Notifications (propres à l'utilisateur connecté) ────
     Route::prefix('notifications')->group(function () {
         Route::get('/', [NotificationController::class, 'index']);

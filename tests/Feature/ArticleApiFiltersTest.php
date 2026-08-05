@@ -3,7 +3,11 @@
 namespace Tests\Feature;
 
 use App\Models\ArticleBase;
+use App\Models\Client;
+use App\Models\Commentaire;
 use App\Models\Technicien;
+use App\Models\Ticket;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
@@ -11,6 +15,49 @@ use Tests\TestCase;
 class ArticleApiFiltersTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_un_client_voit_ses_resolutions_y_compris_les_brouillons(): void
+    {
+        $client = Client::factory()->create();
+        $autreClient = Client::factory()->create();
+        $brouillon = $this->creerResolutionPour($client, false);
+        $articleAutreClient = $this->creerResolutionPour($autreClient, true);
+
+        Sanctum::actingAs($client->user);
+
+        $this->getJson('/api/client/resolutions')
+            ->assertOk()
+            ->assertJsonPath('data.0.id', $brouillon->id)
+            ->assertJsonMissing(['id' => $articleAutreClient->id]);
+    }
+
+    public function test_la_route_des_resolutions_est_reservee_aux_clients(): void
+    {
+        Sanctum::actingAs(User::factory()->technicien()->create());
+
+        $this->getJson('/api/client/resolutions')->assertForbidden();
+    }
+
+    private function creerResolutionPour(Client $client, bool $publie): ArticleBase
+    {
+        $ticket = Ticket::factory()->create([
+            'client_id' => $client->id,
+            'statut' => 'resolu',
+            'date_resolution' => now(),
+        ]);
+        $solution = Commentaire::factory()->create([
+            'ticket_id' => $ticket->id,
+            'est_solution' => true,
+            'solution_validee_at' => now(),
+            'solution_validee_par_id' => $client->user_id,
+        ]);
+
+        return ArticleBase::factory()->create([
+            'ticket_id' => $ticket->id,
+            'commentaire_solution_id' => $solution->id,
+            'publie' => $publie,
+        ]);
+    }
 
     public function test_la_liste_publique_ne_retourne_que_les_articles_publies_non_archives(): void
     {
