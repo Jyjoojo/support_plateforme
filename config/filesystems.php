@@ -15,6 +15,9 @@ return [
 
     'default' => env('FILESYSTEM_DISK', 'local'),
 
+    // Peut être remplacé par "s3" en production sans modifier le code métier.
+    'attachments_disk' => env('ATTACHMENTS_DISK', 'private'),
+
     /*
     |--------------------------------------------------------------------------
     | Filesystem Disks
@@ -36,6 +39,15 @@ return [
             'serve' => true,
             'throw' => false,
             'report' => false,
+        ],
+
+        'private' => [
+            'driver' => 'local',
+            'root' => storage_path('app/private'),
+            'serve' => false,
+            'visibility' => 'private',
+            'throw' => true,
+            'report' => true,
         ],
 
         'public' => [

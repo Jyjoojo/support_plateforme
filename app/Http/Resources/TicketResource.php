@@ -48,7 +48,7 @@ class TicketResource extends JsonResource
             ] : null
             ),
             'commentaires' => CommentaireResource::collection($this->whenLoaded('commentaires')),
-            'pieces_jointes' => $this->whenLoaded('piecesJointes'),
+            'pieces_jointes' => PieceJointeResource::collection($this->whenLoaded('piecesJointes')),
         ];
     }
 }

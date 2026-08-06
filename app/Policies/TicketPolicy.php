@@ -91,6 +91,20 @@ class TicketPolicy
             && $ticket->assignationActive()->where('technicien_id', $user->technicien->id)->exists();
     }
 
+    public function ajouterPieceJointe(User $user, Ticket $ticket): bool
+    {
+        if (in_array($ticket->statut, ['resolu', 'ferme'], true)) {
+            return false;
+        }
+
+        if ($user->isClient()) {
+            return $ticket->client_id === $user->client->id;
+        }
+
+        return $user->isTechnicien()
+            && $ticket->assignationActive()->where('technicien_id', $user->technicien->id)->exists();
+    }
+
     public function confirmerResolution(User $user, Ticket $ticket): bool
     {
         return $user->isClient() && $ticket->client_id === $user->client->id;

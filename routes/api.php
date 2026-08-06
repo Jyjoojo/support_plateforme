@@ -78,9 +78,8 @@ Route::middleware('auth:sanctum')->group(function () {
     // Sous-ressources d'un ticket
     Route::prefix('tickets/{ticket}')->group(function () {
         Route::apiResource('commentaires', CommentaireController::class)->shallow();
-        Route::apiResource('pieces-jointes', PieceJointeController::class)
-            ->only(['index', 'store', 'destroy'])
-            ->shallow();
+        Route::get('pieces-jointes', [PieceJointeController::class, 'index']);
+        Route::post('pieces-jointes', [PieceJointeController::class, 'store']);
         Route::post('assignation', [AssignationController::class, 'assigner']);
         Route::post('mettre-en-attente', [TicketController::class, 'mettreEnAttente']);
         Route::post('reprendre', [TicketController::class, 'reprendre']);
@@ -89,6 +88,12 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('confirmer-resolution', [TicketController::class, 'confirmerResolution']);
         Route::post('refuser-solution', [TicketController::class, 'refuserSolution']);
     });
+
+    Route::get('pieces-jointes/{pieceJointe}/afficher', [PieceJointeController::class, 'afficher'])
+        ->name('pieces-jointes.afficher');
+    Route::get('pieces-jointes/{pieceJointe}/telecharger', [PieceJointeController::class, 'telecharger'])
+        ->name('pieces-jointes.telecharger');
+    Route::delete('pieces-jointes/{pieceJointe}', [PieceJointeController::class, 'destroy']);
 
     // ── Catégories ─────────────────────────────────────────
     Route::apiResource('categories', CategorieController::class)

@@ -14,11 +14,13 @@ use App\Models\User;
 use App\Notifications\TicketCreatedNotification;
 use App\Notifications\TicketResolvedNotification;
 use App\Notifications\TicketStatusChangedNotification;
+use App\Services\PieceJointeService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 
 class TicketController extends Controller
@@ -125,10 +127,12 @@ class TicketController extends Controller
     /**
      * POST /api/tickets
      */
-    public function store(StoreTicketRequest $request): JsonResponse
+    public function store(StoreTicketRequest $request, PieceJointeService $pieceJointeService): JsonResponse
     {
         $user = $request->user();
         $data = $request->validated();
+        $fichiers = $request->file('fichiers', []);
+        unset($data['fichiers']);
 
         // Déterminer la source et le créateur selon le rôle
         if ($user->isClient()) {
@@ -148,7 +152,25 @@ class TicketController extends Controller
             $data['createur_type'] = User::class;
         }
 
-        $ticket = Ticket::create($data);
+        $ticket = null;
+
+        try {
+            $ticket = DB::transaction(function () use ($data, $fichiers, $pieceJointeService, $user, &$ticket) {
+                $ticket = Ticket::create($data);
+
+                foreach ($fichiers as $fichier) {
+                    $pieceJointeService->enregistrer($ticket, $fichier, $user);
+                }
+
+                return $ticket;
+            });
+        } catch (\Throwable $exception) {
+            if ($ticket) {
+                Storage::disk(config('filesystems.attachments_disk'))->deleteDirectory("tickets/{$ticket->id}");
+            }
+
+            throw $exception;
+        }
 
         // Notification à tous les admins pour un nouveau ticket
         if ($user->isClient()) {
@@ -159,7 +181,7 @@ class TicketController extends Controller
 
         return response()->json([
             'message' => 'Ticket créé avec succès.',
-            'ticket' => new TicketResource($ticket->load(['client.user', 'categorie'])),
+            'ticket' => new TicketResource($ticket->load(['client.user', 'categorie', 'piecesJointes'])),
         ], 201);
     }
 

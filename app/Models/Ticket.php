@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Storage;
 
 #[Fillable(['titre', 'description', 'statut', 'priorite', 'source_creation', 'categorie_id', 'createur_id', 'createur_type', 'client_id', 'date_resolution'])]
 class Ticket extends Model
@@ -22,6 +23,11 @@ class Ticket extends Model
         static::created(function (Ticket $ticket): void {
             // Le trigger PostgreSQL renseigne la référence pendant l'insertion.
             $ticket->refresh();
+        });
+
+        static::deleting(function (Ticket $ticket): void {
+            Storage::disk(config('filesystems.attachments_disk', 'private'))
+                ->deleteDirectory("tickets/{$ticket->id}");
         });
     }
 
