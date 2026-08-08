@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Resources\NotificationResource;
 use App\Notifications\TicketCommentedNotification;
+use App\Support\NotificationCatalog;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -20,13 +21,32 @@ class NotificationController extends Controller
             $query->unread();
         }
 
+        $categorie = $request->validate([
+            'categorie' => 'nullable|in:ticket,systeme',
+        ])['categorie'] ?? null;
+
+        if ($categorie === NotificationCatalog::TICKET) {
+            $query->whereIn('type', NotificationCatalog::ticketTypes());
+        } elseif ($categorie === NotificationCatalog::SYSTEME) {
+            $query->whereNotIn('type', NotificationCatalog::ticketTypes());
+        }
+
         $notifications = $query->latest()->paginate(30);
 
         // Fusionner proprement les données de pagination avec notre variable personnalisée
-        $response = $notifications->toArray();
-        $response['total_non_lues'] = $request->user()->unreadNotifications()->count();
+        return NotificationResource::collection($notifications)
+            ->additional([
+                'total_non_lues' => $request->user()->unreadNotifications()->count(),
+            ])
+            ->response();
+    }
 
-        return response()->json($response);
+    /** GET /api/notifications/categories */
+    public function categories(): JsonResponse
+    {
+        return response()->json([
+            'data' => NotificationCatalog::categories(),
+        ]);
     }
 
     /** GET /api/notifications/messages */

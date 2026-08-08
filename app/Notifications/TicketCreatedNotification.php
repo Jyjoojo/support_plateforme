@@ -12,9 +12,7 @@ class TicketCreatedNotification extends Notification implements ShouldQueue
 {
     use Queueable;
 
-    public function __construct(public Ticket $ticket)
-    {
-    }
+    public function __construct(public Ticket $ticket) {}
 
     public function via($notifiable): array
     {
@@ -23,10 +21,10 @@ class TicketCreatedNotification extends Notification implements ShouldQueue
 
     public function toMail($notifiable): MailMessage
     {
-        $url = config('app.url') . '/tickets/' . $this->ticket->id;
+        $url = config('app.url').'/tickets/'.$this->ticket->id;
 
         return (new MailMessage)
-            ->subject('Nouveau ticket #' . $this->ticket->id)
+            ->subject('Nouveau ticket #'.$this->ticket->id)
             ->line("Un nouveau ticket a été créé : {$this->ticket->titre}")
             ->action('Voir le ticket', $url);
     }
@@ -35,9 +33,13 @@ class TicketCreatedNotification extends Notification implements ShouldQueue
     {
         return [
             'ticket_id' => $this->ticket->id,
-            'titre'     => $this->ticket->titre,
-            'priorite'  => $this->ticket->priorite,
-            'createur'  => $this->ticket->createur_id,
+            'ticket_reference' => $this->ticket->reference,
+            'ticket_titre' => $this->ticket->titre,
+            'titre' => $this->ticket->titre,
+            'priorite' => $this->ticket->priorite,
+            'createur' => $this->ticket->createur_id,
+            'titre_notification' => 'Nouveau ticket',
+            'contenu' => "Un nouveau ticket a été créé : {$this->ticket->reference} « {$this->ticket->titre} ».",
         ];
     }
 }

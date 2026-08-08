@@ -63,6 +63,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // ── Notifications (propres à l'utilisateur connecté) ────
     Route::prefix('notifications')->group(function () {
         Route::get('/', [NotificationController::class, 'index']);
+        Route::get('categories', [NotificationController::class, 'categories']);
         Route::get('messages', [NotificationController::class, 'messages']);
         Route::patch('{id}/lire', [NotificationController::class, 'marquerLue']);
         Route::post('tout-lire', [NotificationController::class, 'toutMarquerLu']);

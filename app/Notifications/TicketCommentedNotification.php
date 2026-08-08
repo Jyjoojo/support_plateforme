@@ -40,6 +40,10 @@ class TicketCommentedNotification extends Notification implements ShouldQueue
             'auteur_id' => $this->commentaire->auteur_id,
             'auteur_nom' => trim($this->commentaire->auteur->prenom.' '.$this->commentaire->auteur->nom),
             'excerpt' => substr($this->commentaire->contenu, 0, 200),
+            'titre_notification' => 'Nouveau commentaire',
+            'contenu' => trim($this->commentaire->auteur->prenom.' '.$this->commentaire->auteur->nom)
+                ." a ajouté un commentaire sur le ticket {$this->ticket->reference} « {$this->ticket->titre} ». « "
+                .substr($this->commentaire->contenu, 0, 200).' »',
         ];
     }
 }

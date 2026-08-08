@@ -13,7 +13,9 @@ class TicketReminderNotification extends Notification implements ShouldQueue
     use Queueable;
 
     protected Ticket $ticket;
+
     protected string $deadline;
+
     protected ?string $reason;
 
     /**
@@ -41,10 +43,10 @@ class TicketReminderNotification extends Notification implements ShouldQueue
      */
     public function toMail(object $notifiable): MailMessage
     {
-        $url = config('app.url') . '/tickets/' . $this->ticket->id;
+        $url = config('app.url').'/tickets/'.$this->ticket->id;
 
         $mail = (new MailMessage)
-            ->subject('Rappel : ticket #' . $this->ticket->id)
+            ->subject('Rappel : ticket #'.$this->ticket->id)
             ->line("Le ticket \"{$this->ticket->titre}\" nécessite votre attention.")
             ->line("Date limite : {$this->deadline}");
 
@@ -64,9 +66,20 @@ class TicketReminderNotification extends Notification implements ShouldQueue
     {
         return [
             'ticket_id' => $this->ticket->id,
+            'ticket_reference' => $this->ticket->reference,
+            'ticket_titre' => $this->ticket->titre,
             'titre' => $this->ticket->titre,
             'deadline' => $this->deadline,
             'reason' => $this->reason,
+            'titre_notification' => 'Rappel sur un ticket',
+            'contenu' => $this->databaseMessage(),
         ];
+    }
+
+    private function databaseMessage(): string
+    {
+        $message = "Le ticket {$this->ticket->reference} « {$this->ticket->titre} » nécessite votre attention. Date limite : {$this->deadline}.";
+
+        return $this->reason ? $message." Motif : {$this->reason}." : $message;
     }
 }

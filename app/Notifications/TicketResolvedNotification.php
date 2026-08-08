@@ -37,10 +37,10 @@ class TicketResolvedNotification extends Notification implements ShouldQueue
      */
     public function toMail(object $notifiable): MailMessage
     {
-        $url = config('app.url') . '/tickets/' . $this->ticket->id;
+        $url = config('app.url').'/tickets/'.$this->ticket->id;
 
         return (new MailMessage)
-            ->subject('Ticket #' . $this->ticket->id . ' résolu')
+            ->subject('Ticket #'.$this->ticket->id.' résolu')
             ->line("Le ticket \"{$this->ticket->titre}\" a été marqué comme résolu.")
             ->action('Voir le ticket', $url)
             ->line('Vous pouvez consulter les détails dans l’interface.');
@@ -55,8 +55,12 @@ class TicketResolvedNotification extends Notification implements ShouldQueue
     {
         return [
             'ticket_id' => $this->ticket->id,
+            'ticket_reference' => $this->ticket->reference,
+            'ticket_titre' => $this->ticket->titre,
             'titre' => $this->ticket->titre,
             'date_resolution' => $this->ticket->date_resolution?->toDateTimeString(),
+            'titre_notification' => 'Ticket résolu',
+            'contenu' => "Le ticket {$this->ticket->reference} « {$this->ticket->titre} » a été marqué comme résolu.",
         ];
     }
 }

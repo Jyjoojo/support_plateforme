@@ -13,9 +13,7 @@ class TicketAssignedNotification extends Notification implements ShouldQueue
 {
     use Queueable;
 
-    public function __construct(public Ticket $ticket, public Assignation $assignation)
-    {
-    }
+    public function __construct(public Ticket $ticket, public Assignation $assignation) {}
 
     public function via($notifiable): array
     {
@@ -24,10 +22,10 @@ class TicketAssignedNotification extends Notification implements ShouldQueue
 
     public function toMail($notifiable): MailMessage
     {
-        $url = config('app.url') . '/tickets/' . $this->ticket->id;
+        $url = config('app.url').'/tickets/'.$this->ticket->id;
 
         return (new MailMessage)
-            ->subject('Ticket assigné #' . $this->ticket->id)
+            ->subject('Ticket assigné #'.$this->ticket->id)
             ->line("Le ticket \"{$this->ticket->titre}\" vous a été assigné.")
             ->action('Voir le ticket', $url);
     }
@@ -36,8 +34,12 @@ class TicketAssignedNotification extends Notification implements ShouldQueue
     {
         return [
             'ticket_id' => $this->ticket->id,
+            'ticket_reference' => $this->ticket->reference,
+            'ticket_titre' => $this->ticket->titre,
             'assignation_id' => $this->assignation->id,
             'assigner_id' => $this->assignation->assigne_par_id,
+            'titre_notification' => 'Ticket assigné',
+            'contenu' => "Le ticket {$this->ticket->reference} « {$this->ticket->titre} » vous a été assigné.",
         ];
     }
 }

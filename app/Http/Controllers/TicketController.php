@@ -119,7 +119,7 @@ class TicketController extends Controller
                 WHEN 'normale' THEN 3
                 WHEN 'basse'   THEN 4
                 END")
-            ->paginate(20);
+            ->paginate(5);
 
         return TicketResource::collection($tickets);
     }

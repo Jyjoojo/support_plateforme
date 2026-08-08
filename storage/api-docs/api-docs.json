@@ -46,10 +46,19 @@
       "Notification": {
         "type": "object",
         "properties": {
-          "id": { "type": "integer" },
-          "message": { "type": "string" },
-          "lue": { "type": "boolean" },
-          "created_at": { "type": "string", "format": "date-time" }
+          "id": { "type": "string", "format": "uuid" },
+          "type": { "type": "string", "example": "App\\Notifications\\TicketCommentedNotification" },
+          "categorie": { "type": "string", "enum": ["ticket", "systeme"] },
+          "titre": { "type": "string", "example": "Nouveau commentaire" },
+          "contenu": { "type": "string" },
+          "lu": { "type": "boolean" },
+          "lu_le": { "type": "string", "format": "date-time", "nullable": true },
+          "cree_le": { "type": "string", "format": "date-time" },
+          "ticket_id": { "type": "string", "format": "uuid", "nullable": true },
+          "ticket_reference": { "type": "string", "nullable": true },
+          "ticket_titre": { "type": "string", "nullable": true },
+          "action": { "type": "object", "nullable": true },
+          "donnees": { "type": "object", "additionalProperties": true }
         }
       }
     }
@@ -237,14 +246,66 @@
         "tags": ["Notifications"],
         "summary": "Lister les notifications",
         "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "categorie",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string", "enum": ["ticket", "systeme"] }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Liste des notifications",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": { "$ref": "#/components/schemas/Notification" }
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/Notification" }
+                    },
+                    "links": { "type": "object" },
+                    "meta": { "type": "object" },
+                    "total_non_lues": { "type": "integer" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/notifications/categories": {
+      "get": {
+        "tags": ["Notifications"],
+        "summary": "Lister les catégories disponibles pour filtrer les notifications",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": { "description": "Catégories de notifications disponibles" }
+        }
+      }
+    },
+    "/notifications/messages": {
+      "get": {
+        "tags": ["Notifications"],
+        "summary": "Lister les cinq derniers commentaires sur les tickets",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Cinq dernières notifications de commentaire au maximum",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "maxItems": 5,
+                      "items": { "$ref": "#/components/schemas/Notification" }
+                    }
+                  }
                 }
               }
             }

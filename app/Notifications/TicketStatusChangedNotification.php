@@ -13,6 +13,7 @@ class TicketStatusChangedNotification extends Notification implements ShouldQueu
     use Queueable;
 
     protected $ticket;
+
     protected $oldStatus;
 
     /**
@@ -39,10 +40,10 @@ class TicketStatusChangedNotification extends Notification implements ShouldQueu
      */
     public function toMail(object $notifiable): MailMessage
     {
-        $url = config('app.url') . '/tickets/' . $this->ticket->id;
+        $url = config('app.url').'/tickets/'.$this->ticket->id;
 
         return (new MailMessage)
-            ->subject('Statut du ticket #' . $this->ticket->id . ' modifié')
+            ->subject('Statut du ticket #'.$this->ticket->id.' modifié')
             ->line("Le statut du ticket \"{$this->ticket->titre}\" a été changé.")
             ->line("Ancien statut: **{$this->oldStatus}**")
             ->line("Nouveau statut: **{$this->ticket->statut}**")
@@ -58,8 +59,18 @@ class TicketStatusChangedNotification extends Notification implements ShouldQueu
     {
         return [
             'ticket_id' => $this->ticket->id,
+            'ticket_reference' => $this->ticket->reference,
+            'ticket_titre' => $this->ticket->titre,
             'ancien_statut' => $this->oldStatus,
             'nouveau_statut' => $this->ticket->statut,
+            'titre_notification' => 'Statut du ticket modifié',
+            'contenu' => sprintf(
+                'Le statut du ticket %s « %s » est passé de « %s » à « %s ».',
+                $this->ticket->reference,
+                $this->ticket->titre,
+                str_replace('_', ' ', $this->oldStatus),
+                str_replace('_', ' ', $this->ticket->statut),
+            ),
         ];
     }
 }

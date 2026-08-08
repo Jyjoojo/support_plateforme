@@ -33,8 +33,12 @@ class TicketSolutionProposedNotification extends Notification implements ShouldQ
     {
         return [
             'ticket_id' => $this->ticket->id,
+            'ticket_reference' => $this->ticket->reference,
+            'ticket_titre' => $this->ticket->titre,
             'commentaire_id' => $this->commentaire->id,
             'titre' => $this->ticket->titre,
+            'titre_notification' => 'Solution proposée',
+            'contenu' => "Une solution a été proposée pour le ticket {$this->ticket->reference} « {$this->ticket->titre} ».",
         ];
     }
 }
