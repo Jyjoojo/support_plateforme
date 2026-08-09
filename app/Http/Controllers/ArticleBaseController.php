@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Resources\ArticleBaseResource;
 use App\Models\ArticleBase;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -15,6 +16,12 @@ use OpenApi\Annotations as OA;
  */
 class ArticleBaseController extends Controller
 {
+    private const DEFAULT_PER_PAGE = 6;
+
+    private const MIN_PER_PAGE = 6;
+
+    private const MAX_PER_PAGE = 100;
+
     /** Résolutions issues des tickets du client connecté, brouillons inclus. */
     public function resolutionsClient(Request $request): JsonResponse
     {
@@ -25,7 +32,7 @@ class ArticleBaseController extends Controller
             ->with([
                 'categorie',
                 'technicien.user',
-                'ticket:id,titre,statut,date_resolution,client_id',
+                'ticket:id,annee,numero,titre,statut,date_resolution,client_id',
                 'commentaireSolution:id,ticket_id,contenu,solution_validee_at',
             ])
             ->whereHas('ticket', fn ($query) => $query
@@ -37,7 +44,9 @@ class ArticleBaseController extends Controller
             ->when($request->filled('search'), fn ($query) => $query->recherche($request->string('search')->toString()))
             ->when($request->filled('categorie_id'), fn ($query) => $query->where('categorie_id', $request->input('categorie_id')))
             ->orderByDesc('created_at')
-            ->paginate(15);
+            ->paginate($this->perPage($request));
+
+        $articles->through(fn (ArticleBase $article) => (new ArticleBaseResource($article))->resolve($request));
 
         return response()->json($articles);
     }
@@ -50,6 +59,7 @@ class ArticleBaseController extends Controller
      *
      *     @OA\Parameter(name="search", in="query", description="Rechercher par titre ou contenu", required=false, @OA\Schema(type="string")),
      *     @OA\Parameter(name="categorie_id", in="query", description="Filtrer par catégorie", required=false, @OA\Schema(type="string", format="uuid")),
+     *     @OA\Parameter(name="perPage", in="query", description="Nombre d'articles par page (entre 6 et 100, 6 par défaut)", required=false, @OA\Schema(type="integer", minimum=6, maximum=100, default=6)),
      *
      *     @OA\Response(
      *         response=200,
@@ -77,7 +87,7 @@ class ArticleBaseController extends Controller
                 ->when($request->filled('publie'), fn ($q) => $q->where('publie', $request->boolean('publie')))
                 ->orderByDesc('created_at');
 
-            return response()->json($query->paginate(20));
+            return response()->json($query->paginate($this->perPage($request)));
         }
 
         // Vue publique : uniquement les articles publiés et non archivés
@@ -87,7 +97,18 @@ class ArticleBaseController extends Controller
             ->when($request->categorie_id, fn ($q) => $q->where('categorie_id', $request->categorie_id))
             ->orderByDesc('vues');
 
-        return response()->json($query->paginate(15));
+        return response()->json($query->paginate($this->perPage($request)));
+    }
+
+    private function perPage(Request $request): int
+    {
+        $requestedPerPage = filter_var($request->input('perPage'), FILTER_VALIDATE_INT);
+
+        if ($requestedPerPage === false) {
+            return self::DEFAULT_PER_PAGE;
+        }
+
+        return min(max($requestedPerPage, self::MIN_PER_PAGE), self::MAX_PER_PAGE);
     }
 
     /**

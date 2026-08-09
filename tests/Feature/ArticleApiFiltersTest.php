@@ -28,6 +28,14 @@ class ArticleApiFiltersTest extends TestCase
         $this->getJson('/api/client/resolutions')
             ->assertOk()
             ->assertJsonPath('data.0.id', $brouillon->id)
+            ->assertJsonPath('data.0.ticket.id', $brouillon->ticket_id)
+            ->assertJsonPath('data.0.ticket.reference', $brouillon->ticket->reference)
+            ->assertJsonPath('data.0.ticket.titre', $brouillon->ticket->titre)
+            ->assertJsonPath('data.0.ticket.statut', 'resolu')
+            ->assertJsonPath('data.0.ticket.date_resolution', $brouillon->ticket->date_resolution->toDateTimeString())
+            ->assertJsonPath('data.0.ticket.client_id', $client->id)
+            ->assertJsonMissingPath('data.0.ticket.annee')
+            ->assertJsonMissingPath('data.0.ticket.numero')
             ->assertJsonMissing(['id' => $articleAutreClient->id]);
     }
 
@@ -36,6 +44,25 @@ class ArticleApiFiltersTest extends TestCase
         Sanctum::actingAs(User::factory()->technicien()->create());
 
         $this->getJson('/api/client/resolutions')->assertForbidden();
+    }
+
+    public function test_un_client_choisit_la_taille_de_page_de_ses_resolutions(): void
+    {
+        $client = Client::factory()->create();
+
+        foreach (range(1, 13) as $_) {
+            $this->creerResolutionPour($client, false);
+        }
+
+        Sanctum::actingAs($client->user);
+
+        $this->getJson('/api/client/resolutions?perPage=12')
+            ->assertOk()
+            ->assertJsonCount(12, 'data')
+            ->assertJsonPath('per_page', 12)
+            ->assertJsonPath('current_page', 1)
+            ->assertJsonPath('last_page', 2)
+            ->assertJsonPath('total', 13);
     }
 
     private function creerResolutionPour(Client $client, bool $publie): ArticleBase
@@ -84,6 +111,27 @@ class ArticleApiFiltersTest extends TestCase
             ->assertOk()
             ->assertJsonFragment(['id' => $brouillon->id])
             ->assertJsonMissing(['id' => $publie->id]);
+    }
+
+    public function test_la_pagination_des_articles_applique_le_defaut_et_les_bornes(): void
+    {
+        ArticleBase::factory()->create(['publie' => true]);
+
+        $this->getJson('/api/articles')
+            ->assertOk()
+            ->assertJsonPath('per_page', 6);
+
+        $this->getJson('/api/articles?perPage=5')
+            ->assertOk()
+            ->assertJsonPath('per_page', 6);
+
+        $this->getJson('/api/articles?perPage=150')
+            ->assertOk()
+            ->assertJsonPath('per_page', 100);
+
+        $this->getJson('/api/articles?perPage=invalide')
+            ->assertOk()
+            ->assertJsonPath('per_page', 6);
     }
 
     public function test_le_filtre_with_archived_inclut_les_articles_archives(): void
