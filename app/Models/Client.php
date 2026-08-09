@@ -7,12 +7,13 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-#[Fillable(['user_id', 'entreprise', 'secteur', 'est_client_officiel',])]
+#[Fillable(['user_id', 'entreprise', 'secteur', 'adresse', 'pays', 'est_client_officiel'])]
 class Client extends Model
 {
     //
     use HasFactory, HasUuids;
-    protected function casts() : array
+
+    protected function casts(): array
     {
         return [
             'est_client_officiel' => 'boolean',
@@ -40,6 +41,6 @@ class Client extends Model
 
     public function getNomCompletAttribute(): string
     {
-        return $this->user->prenom . ' ' . $this->user->nom;
+        return $this->user->prenom.' '.$this->user->nom;
     }
 }

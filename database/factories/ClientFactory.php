@@ -19,6 +19,8 @@ class ClientFactory extends Factory
             'user_id' => User::factory()->client(),
             'entreprise' => fake()->company(),
             'secteur' => fake()->word(),
+            'adresse' => fake()->streetAddress(),
+            'pays' => fake()->country(),
             'est_client_officiel' => fake()->boolean(70),
         ];
     }
