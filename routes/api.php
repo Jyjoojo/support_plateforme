@@ -4,6 +4,7 @@ use App\Http\Controllers\ArticleBaseController;
 use App\Http\Controllers\AssignationController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CategorieController;
+use App\Http\Controllers\ClientDashboardController;
 use App\Http\Controllers\CommentaireController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PieceJointeController;
@@ -58,6 +59,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::patch('auth/profil', [AuthController::class, 'updateProfil']);
 
     // Résolutions personnelles du client (articles publiés ou brouillons)
+    Route::get('client/dashboard', ClientDashboardController::class);
     Route::get('client/resolutions', [ArticleBaseController::class, 'resolutionsClient']);
 
     // ── Notifications (propres à l'utilisateur connecté) ────
