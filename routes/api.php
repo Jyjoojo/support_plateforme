@@ -4,6 +4,7 @@ use App\Http\Controllers\ArticleBaseController;
 use App\Http\Controllers\AssignationController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CategorieController;
+use App\Http\Controllers\ClientController;
 use App\Http\Controllers\ClientDashboardController;
 use App\Http\Controllers\CommentaireController;
 use App\Http\Controllers\NotificationController;
@@ -106,6 +107,8 @@ Route::middleware('auth:sanctum')->group(function () {
     // ROUTES TECHNICIEN — rôles : technicien + administrateur
     // ═══════════════════════════════════════════════════════
     Route::middleware('role:technicien,administrateur')->group(function () {
+        Route::get('clients', [ClientController::class, 'index']);
+
         // Auto-assignation d'un ticket par le technicien lui-même
         Route::post('tickets/{ticket}/auto-assigner', [AssignationController::class, 'autoAssigner'])
             ->middleware('role:technicien');
