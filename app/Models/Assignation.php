@@ -61,7 +61,9 @@ class Assignation extends Model
         // Ici on gère la réassignation : on décrémente l'ancien technicien
         static::creating(function (Assignation $assignation) {
             $derniereAssignation = Assignation::where('ticket_id', $assignation->ticket_id)
-                ->latest('date_assignation')
+                ->orderByDesc('date_assignation')
+                ->orderByDesc('created_at')
+                ->orderByDesc('id')
                 ->first();
 
             if ($derniereAssignation) {

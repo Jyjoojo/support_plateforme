@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Assignation;
+use App\Models\Commentaire;
 use App\Models\Technicien;
 use App\Models\Ticket;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -65,6 +66,11 @@ class TechnicienAssignationWorkflowTest extends TestCase
             'technicien_id' => $technicienActif->id,
             'date_assignation' => now(),
         ]);
+        $commentaire = Commentaire::factory()->create([
+            'ticket_id' => $ticket->id,
+            'auteur_id' => $technicienActif->user_id,
+            'contenu' => 'Diagnostic déjà réalisé sur ce ticket.',
+        ]);
 
         Sanctum::actingAs($autreTechnicien->user);
         $this->postJson("/api/tickets/{$ticket->id}/assignation", [
@@ -81,6 +87,40 @@ class TechnicienAssignationWorkflowTest extends TestCase
             'ticket_id' => $ticket->id,
             'technicien_id' => $destinataire->id,
             'motif' => 'Transfert vers un spécialiste.',
+        ]);
+
+        $this->assertDatabaseHas('commentaires', [
+            'id' => $commentaire->id,
+            'ticket_id' => $ticket->id,
+            'contenu' => 'Diagnostic déjà réalisé sur ce ticket.',
+        ]);
+
+        Sanctum::actingAs($destinataire->user);
+        $this->getJson("/api/tickets/{$ticket->id}/commentaires")
+            ->assertOk()
+            ->assertJsonFragment(['id' => $commentaire->id]);
+    }
+
+    public function test_le_technicien_assigne_peut_modifier_la_priorite_du_ticket(): void
+    {
+        $technicien = Technicien::factory()->create();
+        $ticket = Ticket::factory()->create(['priorite' => 'normale']);
+        Assignation::factory()->create([
+            'ticket_id' => $ticket->id,
+            'technicien_id' => $technicien->id,
+            'date_assignation' => now(),
+        ]);
+        Sanctum::actingAs($technicien->user);
+
+        $this->patchJson("/api/tickets/{$ticket->id}", [
+            'priorite' => 'urgente',
+        ])
+            ->assertOk()
+            ->assertJsonPath('ticket.priorite', 'urgente');
+
+        $this->assertDatabaseHas('tickets', [
+            'id' => $ticket->id,
+            'priorite' => 'urgente',
         ]);
     }
 

@@ -11,6 +11,7 @@ use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PieceJointeController;
 use App\Http\Controllers\RapportController;
 use App\Http\Controllers\StatistiqueController;
+use App\Http\Controllers\TechnicienController;
 use App\Http\Controllers\TicketController;
 use App\Http\Controllers\UserController;
 use Illuminate\Http\Request;
@@ -108,6 +109,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // ═══════════════════════════════════════════════════════
     Route::middleware('role:technicien,administrateur')->group(function () {
         Route::get('clients', [ClientController::class, 'index']);
+        Route::get('techniciens', [TechnicienController::class, 'index']);
 
         // Auto-assignation d'un ticket par le technicien lui-même
         Route::post('tickets/{ticket}/auto-assigner', [AssignationController::class, 'autoAssigner'])

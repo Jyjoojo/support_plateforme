@@ -101,7 +101,9 @@ class Ticket extends Model
                 select id
                 from {$relatedTable} as latest_assignation
                 where latest_assignation.ticket_id = {$relatedTable}.ticket_id
-                order by latest_assignation.date_assignation desc, latest_assignation.created_at desc
+                order by latest_assignation.date_assignation desc,
+                    latest_assignation.created_at desc,
+                    latest_assignation.id desc
                 limit 1
             )");
     }
