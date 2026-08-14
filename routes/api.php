@@ -118,7 +118,8 @@ Route::middleware('auth:sanctum')->group(function () {
         // Rédaction de la base de connaissances
         Route::post('articles', [ArticleBaseController::class, 'store']);
         Route::match(['put', 'patch'], 'articles/{article}', [ArticleBaseController::class, 'update']);
-        Route::post('articles/{article}/soumettre', [ArticleBaseController::class, 'soumettre']);
+        Route::post('articles/{article}/soumettre', [ArticleBaseController::class, 'soumettre'])
+            ->middleware('role:technicien');
     });
 
     // ═══════════════════════════════════════════════════════

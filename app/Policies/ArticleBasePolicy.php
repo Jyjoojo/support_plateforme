@@ -35,10 +35,9 @@ class ArticleBasePolicy
 
     public function submit(User $user, ArticleBase $article): bool
     {
-        return $user->isAdmin()
-            || ($user->isTechnicien()
-                && $article->auteur_id === $user->id
-                && $article->estEditableParTechnicien());
+        return $user->isTechnicien()
+            && $article->auteur_id === $user->id
+            && $article->estEditableParTechnicien();
     }
 
     public function review(User $user, ArticleBase $article): bool

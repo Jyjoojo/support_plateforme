@@ -34,6 +34,26 @@ class ArticleEditorialWorkflowTest extends TestCase
         ]);
     }
 
+    public function test_un_administrateur_ne_soumet_pas_son_brouillon_et_le_publie_directement(): void
+    {
+        $admin = User::factory()->administrateur()->create();
+        $article = ArticleBase::factory()->create([
+            'auteur_id' => $admin->id,
+            'technicien_id' => null,
+            'publie' => false,
+            'statut_editorial' => ArticleBase::STATUT_BROUILLON,
+        ]);
+        Sanctum::actingAs($admin);
+
+        $this->postJson("/api/articles/{$article->id}/soumettre")
+            ->assertForbidden();
+
+        $this->postJson("/api/articles/{$article->id}/publier")
+            ->assertOk()
+            ->assertJsonPath('article.statut_editorial', ArticleBase::STATUT_PUBLIE)
+            ->assertJsonPath('article.valide_par.id', $admin->id);
+    }
+
     public function test_le_technicien_soumet_et_l_administrateur_valide_l_article(): void
     {
         $technicien = Technicien::factory()->create();
