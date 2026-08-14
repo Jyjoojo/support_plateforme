@@ -298,10 +298,12 @@ class TicketController extends Controller
                 ['commentaire_solution_id' => $solution->id],
                 [
                     'ticket_id' => $ticket->id,
+                    'auteur_id' => $solution->auteur_id,
                     'technicien_id' => $solution->auteur?->technicien?->id,
                     'categorie_id' => $ticket->categorie_id,
                     'titre' => $ticket->titre,
                     'contenu' => $solution->contenu,
+                    'statut_editorial' => ArticleBase::STATUT_BROUILLON,
                     'publie' => false,
                 ]
             );

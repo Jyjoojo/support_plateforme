@@ -117,8 +117,10 @@ class RapportController extends Controller
             'filtres' => $this->filtresReponse($filtres, ['limite' => $limite]),
             'plus_consultes' => (clone $requete)->publies()->with('categorie')->orderByDesc('vues')->limit($limite)->get(),
             'par_etat' => [
-                'publies' => (clone $requete)->where('publie', true)->count(),
-                'brouillons' => (clone $requete)->where('publie', false)->count(),
+                'publies' => (clone $requete)->where('statut_editorial', ArticleBase::STATUT_PUBLIE)->count(),
+                'brouillons' => (clone $requete)->where('statut_editorial', ArticleBase::STATUT_BROUILLON)->count(),
+                'en_attente_validation' => (clone $requete)->where('statut_editorial', ArticleBase::STATUT_EN_ATTENTE)->count(),
+                'a_corriger' => (clone $requete)->where('statut_editorial', ArticleBase::STATUT_A_CORRIGER)->count(),
                 'archives' => (clone $requete)->onlyTrashed()->count(),
             ],
             'par_categorie' => $parCategorie,
@@ -140,7 +142,10 @@ class RapportController extends Controller
                 $this->appliquerFiltresTickets($query, $filtres)
                     ->whereNotIn('statut', ['resolu', 'ferme']);
             }])
-            ->having('tickets_ouverts', '>', 0)
+            ->whereHas('tickets', function (Builder $query) use ($filtres) {
+                $this->appliquerFiltresTickets($query, $filtres)
+                    ->whereNotIn('statut', ['resolu', 'ferme']);
+            })
             ->orderByDesc('tickets_ouverts')
             ->limit($limite)
             ->get()

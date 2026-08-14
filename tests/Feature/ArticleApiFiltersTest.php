@@ -134,13 +134,13 @@ class ArticleApiFiltersTest extends TestCase
             ->assertJsonPath('per_page', 6);
     }
 
-    public function test_le_filtre_with_archived_inclut_les_articles_archives(): void
+    public function test_le_filtre_with_archived_inclut_les_articles_archives_pour_un_admin(): void
     {
-        $technicien = Technicien::factory()->create();
+        $admin = User::factory()->administrateur()->create();
         $actif = ArticleBase::factory()->create();
         $archive = ArticleBase::factory()->create();
         $archive->delete();
-        Sanctum::actingAs($technicien->user);
+        Sanctum::actingAs($admin);
 
         $this->getJson('/api/articles?with_archived=1')
             ->assertOk()
@@ -148,17 +148,25 @@ class ArticleApiFiltersTest extends TestCase
             ->assertJsonFragment(['id' => $archive->id]);
     }
 
-    public function test_le_filtre_only_archived_exclut_les_articles_actifs(): void
+    public function test_le_filtre_only_archived_exclut_les_articles_actifs_pour_un_admin(): void
     {
-        $technicien = Technicien::factory()->create();
+        $admin = User::factory()->administrateur()->create();
         $actif = ArticleBase::factory()->create();
         $archive = ArticleBase::factory()->create();
         $archive->delete();
-        Sanctum::actingAs($technicien->user);
+        Sanctum::actingAs($admin);
 
         $this->getJson('/api/articles?only_archived=1')
             ->assertOk()
             ->assertJsonFragment(['id' => $archive->id])
             ->assertJsonMissing(['id' => $actif->id]);
+    }
+
+    public function test_les_archives_sont_reservees_aux_administrateurs(): void
+    {
+        $technicien = Technicien::factory()->create();
+        Sanctum::actingAs($technicien->user);
+
+        $this->getJson('/api/articles?with_archived=1')->assertForbidden();
     }
 }

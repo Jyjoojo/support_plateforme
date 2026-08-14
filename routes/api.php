@@ -115,17 +115,25 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('tickets/{ticket}/auto-assigner', [AssignationController::class, 'autoAssigner'])
             ->middleware('role:technicien');
 
-        // Gestion base de connaissances
-        Route::apiResource('articles', ArticleBaseController::class)
-            ->except(['index', 'show']); // index/show déjà définis en public
-        Route::post('articles/{article}/publier', [ArticleBaseController::class, 'publier']);
-        Route::post('articles/{article}/archiver', [ArticleBaseController::class, 'archiver']);
+        // Rédaction de la base de connaissances
+        Route::post('articles', [ArticleBaseController::class, 'store']);
+        Route::match(['put', 'patch'], 'articles/{article}', [ArticleBaseController::class, 'update']);
+        Route::post('articles/{article}/soumettre', [ArticleBaseController::class, 'soumettre']);
     });
 
     // ═══════════════════════════════════════════════════════
     // ROUTES ADMINISTRATEUR uniquement
     // ═══════════════════════════════════════════════════════
     Route::middleware('role:administrateur')->group(function () {
+        // Validation, publication et cycle de vie des articles
+        Route::post('articles/{article}/valider', [ArticleBaseController::class, 'valider']);
+        Route::post('articles/{article}/refuser', [ArticleBaseController::class, 'refuser']);
+        Route::post('articles/{article}/publier', [ArticleBaseController::class, 'publier']);
+        Route::post('articles/{article}/depublier', [ArticleBaseController::class, 'depublier']);
+        Route::post('articles/{article}/archiver', [ArticleBaseController::class, 'archiver']);
+        Route::post('articles/{article}/restaurer', [ArticleBaseController::class, 'restaurer']);
+        Route::delete('articles/{article}', [ArticleBaseController::class, 'destroy']);
+
         // Gestion des utilisateurs
         Route::apiResource('users', UserController::class);
         Route::patch('users/{user}/toggle-actif', [UserController::class, 'toggleActif']);
